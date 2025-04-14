@@ -1,0 +1,17 @@
+{
+    "gender_roles": {
+        "description": "Gender roles across cultures",
+        "questions": ["What are the gender roles in different cultures?"],
+        "options": ["Open ended"]
+    },
+    "family_values": {
+        "description": "Family values and traditions",
+        "questions": ["How do different cultures view family relationships?"],
+        "options": ["Open ended"]
+    },
+    "work_ethics": {
+        "description": "Work culture and ethics",
+        "questions": ["What are workplace expectations in various cultures?"],
+        "options": ["Open ended"]
+    }
+}

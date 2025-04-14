@@ -1,0 +1,16 @@
+langgraph
+langchain-google-genai
+langchain
+tavily-python
+langchain_community
+langchain-groq
+wikipedia
+google-generativeai
+duckduckgo-search
+backoff
+ratelimit
+requests
+ipython
+pandas
+pydantic
+typing-extensions
