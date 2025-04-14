@@ -4,6 +4,7 @@ import numpy as np
 import re
 from typing import Dict, List
 from .types import GraphState
+from sklearn.metrics.pairwise import cosine_similarity
 # === Global counter for planner ===
 planner_counter = 0
 
@@ -12,6 +13,11 @@ tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 bert_model = BertModel.from_pretrained("bert-base-uncased")
 bert_model.eval()
 
+
+
+
+
+
 # === BERT-based text embedding ===
 @torch.no_grad()
 def get_text_embedding(text: str) -> np.ndarray:
@@ -19,6 +25,51 @@ def get_text_embedding(text: str) -> np.ndarray:
     outputs = bert_model(**inputs)
     cls_embedding = outputs.last_hidden_state[:, 0, :]  # [CLS] token
     return cls_embedding.squeeze().numpy()  # Shape: (768,)
+
+
+# === Cultural Expert Abstract Base Class ===
+class CulturalExpert(ABC):
+    def __init__(self, culture_name: str):
+        self.culture_name = culture_name
+
+    @abstractmethod
+    def generate_response(self, question: str) -> str:
+        pass
+
+    def __call__(self, state: GraphState) -> Dict:
+        question = state["question_meta"]["original"]
+        response = self.generate_response(question)
+        updated = state.get("response_state", {}).get("expert_responses", [])
+        new_entry = {"culture": self.culture_name, "response": response}
+        return {
+            "response_state": {"expert_responses": updated + [new_entry]},
+            "current_state": f"expert_{self.culture_name}"
+        }
+
+# === Cultural Expert Implementations ===
+class USExpert(CulturalExpert):
+    def __init__(self):
+        super().__init__("US")
+
+    def generate_response(self, question: str) -> str:
+        return model(f"As a representative of US culture, how would you answer: '{question}'?")
+
+class ChineseExpert(CulturalExpert):
+    def __init__(self):
+        super().__init__("China")
+
+    def generate_response(self, question: str) -> str:
+        return model(f"As a representative of Chinese culture, how would you answer: '{question}'?")
+
+class IndianExpert(CulturalExpert):
+    def __init__(self):
+        super().__init__("India")
+
+    def generate_response(self, question: str) -> str:
+        return model(f"As a representative of Indian culture, how would you answer: '{question}'?")
+
+
+
 
 # === Prompt generation ===
 def gen_prompt(question: str, topic_mean: np.ndarray, prompt_library: List[str]) -> str:
@@ -46,28 +97,54 @@ def model(prompt: str) -> str:
         return "Aggregated culturally respectful answer."
 
 # === Agent Nodes ===
+
+# === Reference bank of example questions with sensitivity levels ===
+# RAG 
+reference_bank = {
+    "Religion is outdated and should be banned.": "high",
+    "Why do women complain so much?": "high",
+    "Why do Chinese people eat weird food?": "medium",
+    "Why do Muslims pray so often?": "medium",
+    "What is the capital of Germany?": "low",
+    "Tell me about Christmas traditions.": "low"
+}
+
+sensitivity_scale = {"low": 3, "medium": 6, "high": 9}
+reference_embeddings = {
+    q: get_text_embedding(q) for q in reference_bank
+}
+# use the theory of this paper into this function
+# https://arxiv.org/abs/1807.03748
 def determine_cultural_sensitivity(state: GraphState) -> Dict:
     question = state["question_meta"]["original"]
-    prompt = (
-        f"On a scale of 0 (not sensitive) to 10 (highly sensitive), rate the cultural sensitivity of the following question.\n"
-        f"Consider potential for stereotyping, cultural offense, relevance to traditions, value systems, and identity.\n"
-        f"Question: {question}\n"
-        f"Return only a number."
-    )
-    response = model(prompt)
-    try:
-        sensitivity_score = int(re.search(r"\d+", response).group())
-    except Exception:
-        sensitivity_score = 0
+    question_embedding = get_text_embedding(question)
+
+    # Calculate cosine similarity to each reference
+    sims = {
+        ref_q: cosine_similarity(
+            [question_embedding], [ref_emb]
+        )[0][0]
+        for ref_q, ref_emb in reference_embeddings.items()
+    }
+
+    # Find top-matched example and base score
+    best_match, best_sim = max(sims.items(), key=lambda x: x[1])
+    base_score = sensitivity_scale[reference_bank[best_match]]
+
+    # Adjust final score: weight similarity and base sensitivity
+    # Similarity [0, 1] → scaled adjustment [-1, +1]
+    sensitivity_score = min(10, max(0, int(base_score + 2 * (best_sim - 0.5) * 3)))
 
     return {
         "question_meta": {
             **state["question_meta"],
             "is_sensitive": sensitivity_score >= 5,
-            "sensitivity_score": sensitivity_score
+            "sensitivity_score": sensitivity_score,
+            "nearest_sensitive_example": best_match
         },
         "current_state": "sensitivity_check"
     }
+
 
 def extract_sensitive_topics(state: GraphState) -> Dict:
     prompt = f"""Identify potentially insensitive language or generalizations in the input.
@@ -111,40 +188,7 @@ def extract_sensitive_topics(state: GraphState) -> Dict:
 
 def planner_agent(state: GraphState) -> Dict:
 
-  """Plans and orchestrates the flow of the conversation processing pipeline.
 
-    This function manages the state transitions and data flow between different components
-    of the system, including sensitivity checking, topic extraction, database operations,
-    and response composition.
-
-    Args:
-        state (GraphState): Current state object containing conversation context and flags.
-
-    Returns:
-        Dict: Updated state dictionary with next action and relevant flags/data.
-            Contains keys:
-            - current_state (str): Always set to "planner"
-            - planner_counter (int): Incremented counter tracking planner iterations
-            - __next__ (str): Next node to execute
-            - Various activation flags and data depending on the stage:
-                - activate_sensitivity_check (bool)
-                - activate_extract_topics (bool) 
-                - activate_router (bool)
-                - activate_judge (bool)
-                - activate_compose (bool)
-                - db_action (str)
-                - db_key (str)
-                - question_meta (dict)
-                - response_state (dict)
-
-    Flow:
-        1. Initiates sensitivity check
-        2. Triggers topic extraction
-        3. Retrieves sensitive topics from database
-        4. Routes the conversation
-        5. Retrieves judged response from database
-        6. Activates response composition
-    """
     global planner_counter
     planner_counter += 1
     counter = planner_counter
@@ -249,19 +293,7 @@ def cultural_expert_node_factory(culture_name: str):
         }
     return expert_fn
 
-def judge_agent(state: GraphState) -> Dict:
-    responses = state["response_state"].get("expert_responses", [])
-    summary = "\n".join([f"{r['culture']}: {r['response']}" for r in responses])
-    verdict = model(f"Aggregate these culturally-informed answers into one comprehensive and culturally respectful answer:\n{summary}")
-    return {
-        "response_state": {**state.get("response_state", {}), "judged": verdict},
-        "activate_judge": True,
-        "db_action": "write",
-        "db_key": "judged_response",
-        "db_value": verdict,
-        "__next__": "database",
-        "current_state": "judge"
-    }
+
 
 def compose_final_response(state: GraphState) -> Dict:
     final = f"Culturally informed response: {state['response_state']['judged']}"
