@@ -1,10 +1,15 @@
-import torch
-from transformers import BertTokenizer, BertModel
-import numpy as np
 import re
 from typing import Dict, List
-from .types import GraphState
+
+import numpy as np
+import torch
 from sklearn.metrics.pairwise import cosine_similarity
+from transformers import BertModel, BertTokenizer
+
+from llm_provider import create_llm_provider
+
+from .types import GraphState
+
 # === Global counter for planner ===
 planner_counter = 0
 
@@ -14,14 +19,11 @@ bert_model = BertModel.from_pretrained("bert-base-uncased")
 bert_model.eval()
 
 
-
-
-
-
 # === BERT-based text embedding ===
 @torch.no_grad()
 def get_text_embedding(text: str) -> np.ndarray:
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=128, padding=True)
+    inputs = tokenizer(text, return_tensors="pt",
+                       truncation=True, max_length=128, padding=True)
     outputs = bert_model(**inputs)
     cls_embedding = outputs.last_hidden_state[:, 0, :]  # [CLS] token
     return cls_embedding.squeeze().numpy()  # Shape: (768,)
@@ -47,6 +49,8 @@ class CulturalExpert(ABC):
         }
 
 # === Cultural Expert Implementations ===
+
+
 class USExpert(CulturalExpert):
     def __init__(self):
         super().__init__("US")
@@ -54,12 +58,14 @@ class USExpert(CulturalExpert):
     def generate_response(self, question: str) -> str:
         return model(f"As a representative of US culture, how would you answer: '{question}'?")
 
+
 class ChineseExpert(CulturalExpert):
     def __init__(self):
         super().__init__("China")
 
     def generate_response(self, question: str) -> str:
         return model(f"As a representative of Chinese culture, how would you answer: '{question}'?")
+
 
 class IndianExpert(CulturalExpert):
     def __init__(self):
@@ -69,11 +75,10 @@ class IndianExpert(CulturalExpert):
         return model(f"As a representative of Indian culture, how would you answer: '{question}'?")
 
 
-
-
 # === Prompt generation ===
 def gen_prompt(question: str, topic_mean: np.ndarray, prompt_library: List[str]) -> str:
     return f"{prompt_library[0]}\n\n{question}"
+
 
 # === Mock expert classes for testing ===
 expert_classes = {
@@ -83,23 +88,32 @@ expert_classes = {
 }
 
 # === Mock LLM model - replace with actual implementation ===
+
+
 def model(prompt: str) -> str:
-    print(f"Model prompt: {prompt}")
-    if "sensitivity score" in prompt:
-        return "7"
-    elif "components" in prompt:
-        return "religion, gender"
-    elif "which 2-3 cultures" in prompt:
-        return "US, China"
-    elif "representative" in prompt:
-        return f"This is a {prompt.split()[4]} perspective."
-    else:
-        return "Aggregated culturally respectful answer."
+    """
+    Generate a response using the configured LLM provider.
+
+    This function uses the provider factory to create the appropriate LLM
+    provider (real or mock) based on environment configuration.
+
+    Args:
+        prompt: The prompt to send to the LLM
+
+    Returns:
+        The generated response string
+    """
+    # Create a provider with auto-detection (will use mock if no API key)
+    provider = create_llm_provider("auto")
+
+    # Generate and return the response
+    return provider.generate(prompt)
 
 # === Agent Nodes ===
 
+
 # === Reference bank of example questions with sensitivity levels ===
-# RAG 
+# RAG
 reference_bank = {
     "Religion is outdated and should be banned.": "high",
     "Why do women complain so much?": "high",
@@ -115,6 +129,8 @@ reference_embeddings = {
 }
 # use the theory of this paper into this function
 # https://arxiv.org/abs/1807.03748
+
+
 def determine_cultural_sensitivity(state: GraphState) -> Dict:
     question = state["question_meta"]["original"]
     question_embedding = get_text_embedding(question)
@@ -133,7 +149,8 @@ def determine_cultural_sensitivity(state: GraphState) -> Dict:
 
     # Adjust final score: weight similarity and base sensitivity
     # Similarity [0, 1] → scaled adjustment [-1, +1]
-    sensitivity_score = min(10, max(0, int(base_score + 2 * (best_sim - 0.5) * 3)))
+    sensitivity_score = min(
+        10, max(0, int(base_score + 2 * (best_sim - 0.5) * 3)))
 
     return {
         "question_meta": {
@@ -174,7 +191,8 @@ def extract_sensitive_topics(state: GraphState) -> Dict:
     ```     
     """
     question = state["question_meta"]["original"]
-    response = model(f"What are the culturally sensitive components in the following question: '{question}'? List them.")
+    response = model(
+        f"What are the culturally sensitive components in the following question: '{question}'? List them.")
     topics = re.findall(r"[A-Za-z]+", response)
     return {
         "question_meta": {**state["question_meta"], "sensitive_topics": topics},
@@ -187,7 +205,6 @@ def extract_sensitive_topics(state: GraphState) -> Dict:
 
 
 def planner_agent(state: GraphState) -> Dict:
-
 
     global planner_counter
     planner_counter += 1
@@ -224,7 +241,8 @@ def planner_agent(state: GraphState) -> Dict:
         }
     elif counter == 5 and state.get("response_state", {}).get("expert_responses"):
         responses = state["response_state"]["expert_responses"]
-        summary = "\n".join([f"{r['culture']}: {r['response']}" for r in responses])
+        summary = "\n".join(
+            [f"{r['culture']}: {r['response']}" for r in responses])
         verdict = model(
             f"Aggregate these culturally-informed answers into one comprehensive and culturally respectful answer:\n{summary}"
         )
@@ -281,10 +299,12 @@ def route_to_cultures(state: GraphState, lambda_1: float = 0.6, lambda_2: float 
         "expert_weights_and_prompts": A
     }
 
+
 def cultural_expert_node_factory(culture_name: str):
     def expert_fn(state: GraphState) -> Dict:
         question = state["question_meta"]["original"]
-        response = model(f"As a representative of {culture_name} culture, how would you answer: '{question}'?")
+        response = model(
+            f"As a representative of {culture_name} culture, how would you answer: '{question}'?")
         updated = state.get("response_state", {}).get("expert_responses", [])
         new_entry = {"culture": culture_name, "response": response}
         return {
@@ -292,8 +312,6 @@ def cultural_expert_node_factory(culture_name: str):
             "current_state": f"expert_{culture_name}"
         }
     return expert_fn
-
-
 
 
 def compose_final_response(
@@ -308,7 +326,8 @@ def compose_final_response(
     demographics = user_profile.get("demographics", {})
 
     # Step 1: Select top-N cultures by weight
-    top_cultures = sorted(activate_set, key=lambda x: x[1], reverse=True)[:top_n]
+    top_cultures = sorted(
+        activate_set, key=lambda x: x[1], reverse=True)[:top_n]
     expert_responses: List[ExpertResponse] = [
         {"culture": culture, "response": prompt} for culture, _, prompt in top_cultures
     ]
@@ -331,11 +350,14 @@ def compose_final_response(
         prompt_parts.append(f"{i}. ({resp['culture']}) {resp['response']}")
 
     if sensitive_topics:
-        prompt_parts.append(f"\nSensitive Topics: {', '.join(sensitive_topics)}")
+        prompt_parts.append(
+            f"\nSensitive Topics: {', '.join(sensitive_topics)}")
     if relevant_cultures:
-        prompt_parts.append(f"Relevant Cultures: {', '.join(relevant_cultures)}")
+        prompt_parts.append(
+            f"Relevant Cultures: {', '.join(relevant_cultures)}")
 
-    prompt_parts.append("\nPlease write a final, thoughtful, and culturally-informed response that blends the above insights in a coherent and respectful way.")
+    prompt_parts.append(
+        "\nPlease write a final, thoughtful, and culturally-informed response that blends the above insights in a coherent and respectful way.")
 
     llm_prompt = "\n".join(prompt_parts)
 
@@ -354,6 +376,8 @@ def compose_final_response(
         "current_state": "compose"
     }
 # === Router Function ===
+
+
 def analyzer_router(state: GraphState) -> List[str]:
     cultures = state["question_meta"].get("relevant_cultures", [])
     return [f"expert_{culture}" for culture in cultures]
