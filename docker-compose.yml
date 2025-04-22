@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  cultural-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cultural-agent-container
+    volumes:
+      - ./outputs:/app/outputs          # Store evaluation_chart.png outside container
+      - ./logs:/app/logs                # Save logs
+    environment:
+      PYTHONUNBUFFERED: 1               # Force real-time logging
+    entrypoint: >
+      bash -c "
+        echo '🧹 Cleaning old outputs...' &&
+        rm -f /app/outputs/evaluation_chart.png /app/logs/run.log &&
+        echo '🚀 Starting system...' &&
+        python main.py | tee /app/logs/run.log
+      "
