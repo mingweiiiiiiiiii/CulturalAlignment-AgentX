@@ -1,10 +1,11 @@
-rtsso
+# rtsso
 # Load BERT model and tokenizer for scoring and embedding
-class BERTWrapper:toTokenizer
-import matplotlib.pyplot as pl
+from transformers import  AutoTokenizer, AutoModel
+import torch
+import matplotlib.pyplot as plt
 
 # Lad BER model and ter for scoring and embedding
-class BERTWrapp:
+class BERTWrapper:
     def __init__(self, model_name="bert-base-uncased"):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModel.from_pretrained(model_name)

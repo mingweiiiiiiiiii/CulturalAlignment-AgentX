@@ -1,6 +1,13 @@
 import pytest
 import os
+import numpy as np
 from ..inputData import PersonaSampler
+from inputData import (
+    process_user_input,
+    validate_user_profile,
+    process_wvs_data,
+    normalize_demographics
+)
 
 @pytest.fixture
 def sampler():
@@ -240,3 +247,100 @@ def test_sampling_fields_validation(sampler):
     assert isinstance(fields["Country"], list)
     assert len(fields["Country"]) > 0
     assert all(isinstance(x, str) for x in fields["Country"])
+
+def test_process_user_input(mock_user_profile):
+    input_text = "How do different cultures celebrate holidays?"
+    result = process_user_input(input_text, mock_user_profile)
+    
+    assert "question_meta" in result
+    assert "original" in result["question_meta"]
+    assert result["question_meta"]["original"] == input_text
+    assert "user_profile" in result
+    assert result["user_profile"] == mock_user_profile
+
+def test_validate_user_profile():
+    # Test valid profile
+    valid_profile = {
+        "demographics": {
+            "country": "US",
+            "age": 30,
+            "sex": "Female",
+            "education": "Bachelor's degree"
+        },
+        "preferences": {}
+    }
+    assert validate_user_profile(valid_profile) == True
+    
+    # Test invalid profiles
+    invalid_profiles = [
+        {},  # Empty profile
+        {"demographics": {}},  # Empty demographics
+        {  # Missing required field
+            "demographics": {
+                "country": "US",
+                "sex": "Female"
+            },
+            "preferences": {}
+        },
+        {  # Invalid age
+            "demographics": {
+                "country": "US",
+                "age": "thirty",
+                "sex": "Female",
+                "education": "Bachelor's degree"
+            },
+            "preferences": {}
+        }
+    ]
+    
+    for profile in invalid_profiles:
+        with pytest.raises(Exception):
+            validate_user_profile(profile)
+
+def test_process_wvs_data():
+    # Mock WVS data
+    mock_wvs_data = {
+        "US": {
+            "values": np.random.rand(10),
+            "demographics": {
+                "age_distribution": [0.2, 0.3, 0.3, 0.2],
+                "education_levels": {"high": 0.4, "medium": 0.4, "low": 0.2}
+            }
+        }
+    }
+    
+    result = process_wvs_data(mock_wvs_data)
+    assert isinstance(result, dict)
+    assert "US" in result
+    assert "values" in result["US"]
+    assert "demographics" in result["US"]
+
+def test_normalize_demographics():
+    # Test age normalization
+    age = 30
+    normalized_age = normalize_demographics("age", age)
+    assert isinstance(normalized_age, float)
+    assert 0 <= normalized_age <= 1
+    
+    # Test education normalization
+    education_levels = [
+        "No formal education",
+        "Primary school",
+        "Secondary school",
+        "Bachelor's degree",
+        "Master's degree",
+        "Doctorate"
+    ]
+    
+    for edu in education_levels:
+        normalized_edu = normalize_demographics("education", edu)
+        assert isinstance(normalized_edu, float)
+        assert 0 <= normalized_edu <= 1
+    
+    # Test invalid inputs
+    with pytest.raises(ValueError):
+        normalize_demographics("age", -1)
+    with pytest.raises(ValueError):
+        normalize_demographics("education", "Invalid degree")
+    with pytest.raises(ValueError):
+        normalize_demographics("invalid_field", "some value")
