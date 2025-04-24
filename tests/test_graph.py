@@ -1,5 +1,6 @@
 import pytest
-from ..graph import create_cultural_graph, GraphState
+from graph import create_cultural_graph
+from custom_types import GraphState
 
 def test_graph_creation():
     # Test with default cultures
@@ -11,24 +12,10 @@ def test_graph_creation():
     graph = create_cultural_graph(custom_cultures)
     assert graph is not None
 
-def test_graph_execution():
+def test_graph_execution(mock_graph_state):
     graph = create_cultural_graph()
+    result = graph.run(GraphState(**mock_graph_state))
     
-    # Test simple state
-    initial_state = GraphState(
-        question_meta={
-            "original": "How do different cultures celebrate holidays?"
-        },
-        user_profile={
-            "demographics": {
-                "country": "US",
-                "age": 30
-            },
-            "preferences": {}
-        }
-    )
-    
-    result = graph.run(initial_state)
     assert result is not None
     assert "response_state" in result
     assert "final" in result["response_state"]
@@ -38,37 +25,30 @@ def test_graph_error_handling():
     
     # Test with invalid state
     with pytest.raises(Exception):
-        graph.run({})  # Empty state should raise error
+        graph.run({})
     
     # Test with missing required fields
     with pytest.raises(Exception):
-        graph.run({"question_meta": {}})  # Missing original question
+        graph.run(GraphState(question_meta={}))
 
-def test_graph_state_transitions():
+def test_graph_state_transitions(mock_user_profile):
     graph = create_cultural_graph()
     
     state = GraphState(
         question_meta={
             "original": "What are common wedding traditions?"
         },
-        user_profile={
-            "demographics": {
-                "country": "US",
-                "age": 25
-            },
-            "preferences": {}
-        }
+        user_profile=mock_user_profile
     )
     
     result = graph.run(state)
     
-    # Verify state transitions
     assert "current_state" in result
-    assert result["current_state"] == "compose"  # Final state should be compose
+    assert result["current_state"] == "compose"
     assert "response_state" in result
     assert "expert_responses" in result["response_state"]
 
-def test_database_interactions():
+def test_database_interactions(mock_user_profile):
     graph = create_cultural_graph()
     
     state = GraphState(
@@ -76,22 +56,19 @@ def test_database_interactions():
             "original": "How do different cultures celebrate holidays?",
             "sensitive_topics": ["cultural_practices"]
         },
-        user_profile={
-            "demographics": {"country": "US"},
-            "preferences": {}
-        }
+        user_profile=mock_user_profile
     )
     
     # Test database write
-    state["db_action"] = "write"
-    state["db_key"] = "test_key"
-    state["db_value"] = ["cultural_practices"]
+    state.db_action = "write"
+    state.db_key = "test_key"
+    state.db_value = ["cultural_practices"]
     result = graph.run(state)
     assert "db_result" in result
     
     # Test database read
-    state["db_action"] = "read"
-    state["db_key"] = "test_key"
+    state.db_action = "read"
+    state.db_key = "test_key"
     result = graph.run(state)
     assert "db_result" in result
     assert result["db_result"] == ["cultural_practices"]
@@ -110,21 +87,20 @@ def test_edge_case_state_transitions():
         graph.run(state)
     
     # Test invalid state transition
-    state = GraphState(
-        question_meta={
-            "original": "Test question"
-        },
-        user_profile={
-            "demographics": {"country": "US"},
-            "preferences": {}
-        },
-        current_state="invalid_state"
-    )
-    
     with pytest.raises(Exception):
-        graph.run(state)
+        invalid_state = GraphState(
+            question_meta={
+                "original": "Test question"
+            },
+            user_profile={
+                "demographics": {"country": "US"},
+                "preferences": {}
+            },
+            current_state="invalid_state"
+        )
+        graph.run(invalid_state)
 
-def test_concurrent_expert_execution():
+def test_concurrent_expert_execution(mock_user_profile):
     graph = create_cultural_graph()
     
     state = GraphState(
@@ -133,15 +109,11 @@ def test_concurrent_expert_execution():
             "sensitive_topics": ["cultural_practices"],
             "relevant_cultures": ["US", "China", "India"]
         },
-        user_profile={
-            "demographics": {"country": "US"},
-            "preferences": {}
-        }
+        user_profile=mock_user_profile
     )
     
     result = graph.run(state)
     
-    # Verify all experts were executed
     assert "response_state" in result
     assert "expert_responses" in result["response_state"]
     responses = result["response_state"]["expert_responses"]

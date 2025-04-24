@@ -1,5 +1,5 @@
 from langgraph.graph import StateGraph, END
-from .types import GraphState
+from custom_types import GraphState
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, List, Any
 from .nodes import (
@@ -17,7 +17,7 @@ from .nodes import CulturalExpert,USExpert,ChineseExpert,IndianExpert
 from .db import database_node
 
 from langgraph.graph import StateGraph, END
-from .types import GraphState
+from custom_types import GraphState
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, List, Any
 from .nodes import (

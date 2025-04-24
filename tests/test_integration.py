@@ -155,3 +155,154 @@ def test_concurrent_processing():
     for result in results:
         assert "response_state" in result
         assert "final" in result["response_state"]
+
+import pytest
+from graph import create_cultural_graph, GraphState
+from nodes import (
+    get_text_embedding,
+    determine_cultural_sensitivity,
+    extract_sensitive_topics,
+    route_to_cultures
+)
+from inputData import process_user_input
+
+def test_full_conversation_flow(mock_user_profile, mock_embedding):
+    # Initialize graph
+    graph = create_cultural_graph()
+    
+    # Test simple cultural question
+    input_text = "How do different cultures celebrate New Year?"
+    initial_state = process_user_input(input_text, mock_user_profile)
+    
+    # Process through graph
+    result = graph.run(GraphState(**initial_state))
+    
+    assert result is not None
+    assert "response_state" in result
+    assert "final" in result["response_state"]
+    assert isinstance(result["response_state"]["final"], str)
+    assert len(result["response_state"]["final"]) > 0
+
+def test_sensitive_topic_handling(mock_user_profile):
+    graph = create_cultural_graph()
+    
+    # Test sensitive cultural question
+    input_text = "Why do some cultures have controversial traditions?"
+    initial_state = process_user_input(input_text, mock_user_profile)
+    
+    # Process through sensitivity detection
+    state = determine_cultural_sensitivity(initial_state)
+    assert state["question_meta"]["is_sensitive"] == True
+    
+    # Extract topics
+    state = extract_sensitive_topics(state)
+    assert "sensitive_topics" in state["question_meta"]
+    assert len(state["question_meta"]["sensitive_topics"]) > 0
+    
+    # Full graph processing
+    result = graph.run(GraphState(**initial_state))
+    assert "response_state" in result
+    assert "final" in result["response_state"]
+    
+    # Check for sensitivity acknowledgment in response
+    response = result["response_state"]["final"].lower()
+    assert any(word in response for word in ["respect", "sensitive", "understand", "perspective"])
+
+def test_multi_cultural_routing(mock_user_profile, mock_embedding):
+    graph = create_cultural_graph()
+    
+    # Test question involving multiple cultures
+    input_text = "Compare wedding traditions in different cultures"
+    initial_state = process_user_input(input_text, mock_user_profile)
+    
+    # Process cultural routing
+    culture_embeddings = {
+        "US": mock_embedding,
+        "China": mock_embedding,
+        "India": mock_embedding
+    }
+    
+    state = route_to_cultures(initial_state, list(culture_embeddings.keys()), 
+                            list(culture_embeddings.values()))
+    
+    assert "relevant_cultures" in state["question_meta"]
+    assert len(state["question_meta"]["relevant_cultures"]) > 1
+    
+    # Full graph processing
+    result = graph.run(GraphState(**initial_state))
+    assert "response_state" in result
+    assert "expert_responses" in result["response_state"]
+    
+    # Verify multiple cultural perspectives
+    expert_responses = result["response_state"]["expert_responses"]
+    cultures_represented = {resp["culture"] for resp in expert_responses}
+    assert len(cultures_represented) > 1
+
+def test_error_handling_integration(mock_user_profile):
+    graph = create_cultural_graph()
+    
+    # Test with invalid input
+    with pytest.raises(Exception):
+        graph.run(GraphState({}))
+    
+    # Test with missing user profile
+    with pytest.raises(Exception):
+        graph.run(GraphState(question_meta={"original": "test"}))
+    
+    # Test with invalid state transitions
+    with pytest.raises(Exception):
+        invalid_state = GraphState(
+            question_meta={"original": "test"},
+            user_profile=mock_user_profile,
+            current_state="invalid_state"
+        )
+        graph.run(invalid_state)
+
+def test_cultural_alignment_flow(mock_user_profile, mock_embedding):
+    graph = create_cultural_graph()
+    
+    # Test cultural alignment with user profile
+    input_text = "What are appropriate business meeting customs?"
+    initial_state = process_user_input(input_text, mock_user_profile)
+    
+    result = graph.run(GraphState(**initial_state))
+    
+    # Verify response aligns with user's cultural background
+    user_country = mock_user_profile["demographics"]["country"]
+    response = result["response_state"]["final"]
+    
+    # Check if the response prioritizes user's cultural context
+    assert any(expert["culture"] == user_country 
+              for expert in result["response_state"]["expert_responses"])
+    
+    # Verify cultural sensitivity
+    assert "sensitivity_score" in result["question_meta"]
+    assert 0 <= result["question_meta"]["sensitivity_score"] <= 10
+
+def test_cross_cultural_comparison(mock_user_profile):
+    graph = create_cultural_graph()
+    
+    # Test explicit cross-cultural comparison
+    input_text = "Compare dining etiquette in US, China, and India"
+    initial_state = process_user_input(input_text, mock_user_profile)
+    
+    result = graph.run(GraphState(**initial_state))
+    
+    # Verify multiple cultural perspectives are included
+    expert_responses = result["response_state"]["expert_responses"]
+    cultures = {resp["culture"] for resp in expert_responses}
+    
+    assert "US" in cultures
+    assert "China" in cultures
+    assert "India" in cultures
+    
+    # Verify balanced representation
+    response_lengths = {culture: len(resp["response"]) 
+                       for resp, culture in zip(expert_responses, cultures)}
+    
+    # Check if responses are roughly balanced in length
+    lengths = list(response_lengths.values())
+    max_length = max(lengths)
+    min_length = min(lengths)
+    assert min_length > 0
+    assert max_length / min_length < 3  # No response should be 3x longer than others
