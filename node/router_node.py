@@ -4,6 +4,9 @@ from typing import Dict, List, Any
 import random
 import ollama
 
+# 🆕 Import the sensitivity check function
+from sen_agent_node import determine_cultural_sensitivity
+
 # ===============================
 # 🚀 Embedding Function
 # ===============================
@@ -51,10 +54,24 @@ def route_to_cultures(
 ) -> Dict:
     """Top-k Cultural Expert Routing with fallback clustering."""
 
+    # 🛠️ Correctly update the original state with sensitivity info
+    sensitivity_info = determine_cultural_sensitivity(state)
+    state.update(sensitivity_info)
+
     q = state["question_meta"]["original"]
     user_profile = state["user_profile"]
     user_embedding = state["user_embedding"]
     sensitive_topics = state["question_meta"].get("sensitive_topics", [])
+
+    # 🆙 Adjust parameters based on sensitivity score
+    sensitivity_score = state["question_meta"].get("sensitivity_score", 0)
+    if sensitivity_score >= 8:
+        tau = -10.0
+        top_k = min(top_k, 2)
+    elif sensitivity_score >= 5:
+        tau = -20.0
+    else:
+        tau = -30.0
 
     inv_lambda = 1.0 / (lambda_1 + lambda_2)
 
@@ -73,12 +90,12 @@ def route_to_cultures(
     t_bar = np.mean(T, axis=0)
     z = inv_lambda * (lambda_1 * t_bar + lambda_2 * user_embedding)
 
-    # Distance scoring (Manhattan)
+    # Distance scoring (Manhattan distance)
     scores = -np.sum(np.abs(expert_embeddings - z), axis=1)
     top_indices = np.argsort(scores)[-top_k:][::-1]
     s_top = scores[top_indices]
 
-    # Fallback if needed
+    # Fallback to cluster centroids if needed
     if np.max(s_top) < tau:
         if precomputed_centroids is None:
             kmeans = KMeans(n_clusters=3, random_state=0, n_init='auto')
@@ -156,7 +173,7 @@ if __name__ == "__main__":
 
     state = GraphState({
         "question_meta": {
-            "original": "How does culture influence leadership style?",
+            "original": "Why do women complain so much?",  # <-- sensitive question
             "sensitive_topics": ["Spain", "Mexico"]
         },
         "user_profile": user_profile,
@@ -170,6 +187,6 @@ if __name__ == "__main__":
         prompt_libraries
     )
 
-    print("\n✅ Updated State:")
+    print("\n✅ Updated State after Routing:")
     for key, value in updated_state.items():
         print(f"{key}: {value}")
