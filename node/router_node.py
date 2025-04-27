@@ -8,7 +8,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 def route_to_cultures(
     state: GraphState, 
-    evaluator: EvaluationLosses,
     expert_list: List[str],
     expert_embeddings: np.ndarray,
     prompt_libraries: Dict[str, List[str]],
@@ -16,7 +15,6 @@ def route_to_cultures(
     lambda_2: float = 0.4,
     top_k: int = 3,
     tau: float = -30.0
-) -> Dict:
 ) -> Dict:
     q = state["question_meta"]["original"]
     user_profile = state["user_profile"]
