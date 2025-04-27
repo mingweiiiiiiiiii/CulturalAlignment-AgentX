@@ -17,9 +17,9 @@ markdownify==0.13.1
 pytest>=8.1.1
 hypothesis>=6.88.0
 pymongo==4.10.1
-
-# Newly added
-google-generativeai>=0.3.2  # <-- for Gemini API
+google-generativeai>=0.3.2
 numpy
 matplotlib
-pymilvus>=2.2.10  # assuming you meant Milvus
+pymilvus>=2.2.10
+mistralai
+torch  # <-- added PyTorch here
