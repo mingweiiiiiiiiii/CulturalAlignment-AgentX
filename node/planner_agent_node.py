@@ -1,9 +1,8 @@
-import torch
-from transformers import BertTokenizer, BertModel
+
 import numpy as np
 import re
 from typing import Dict, List
-from node.types import GraphState
+
 from sklearn.metrics.pairwise import cosine_similarity
 
 # === Global counter for planner ===
@@ -11,13 +10,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 planner_counter = 0
 
 
-# === Load BERT model and tokenizer once ===
-tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-bert_model = BertModel.from_pretrained("bert-base-uncased")
-bert_model.eval()
 
-
-def planner_agent(state: GraphState, evaluator: EvaluationLosses) -> Dict:
+def planner_agent(state) -> Dict:
 
 
     global planner_counter
@@ -53,19 +47,3 @@ def planner_agent(state: GraphState, evaluator: EvaluationLosses) -> Dict:
             "activate_router": True,
             "__next__": "router"
         }
-    elif counter == 5 and state.get("response_state", {}).get("expert_responses"):
-        responses = state["response_state"]["expert_responses"]
-        summary = "\n".join([f"{r['culture']}: {r['response']}" for r in responses])
-        verdict = model(
-            f"Aggregate these culturally-informed answers into one comprehensive and culturally respectful answer:\n{summary}"
-        )
-        return {
-            **updated_state,
-            "response_state": {
-                **state.get("response_state", {}),
-                "judged": verdict
-            },
-            "activate_compose": True,
-            "__next__": "compose"
-        }
-    return updated_state
