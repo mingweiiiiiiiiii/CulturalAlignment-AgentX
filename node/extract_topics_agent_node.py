@@ -1,18 +1,11 @@
-import torch
+
 import os
-from transformers import BertTokenizer, BertModel
+
 from google import genai
 from dotenv import load_dotenv
 import numpy as np
 import re
 from typing import Dict
-
-# from mylanggraph.types import GraphState
-
-# === Load BERT model and tokenizer once ===
-tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-bert_model = BertModel.from_pretrained("bert-base-uncased")
-bert_model.eval()
 
 def extract_sensitive_topics(state) -> Dict:
     question = state["question_meta"]["original"]
