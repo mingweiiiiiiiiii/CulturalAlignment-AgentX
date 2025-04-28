@@ -1,3 +1,4 @@
+from typing import Optional, List  
 from langgraph.graph import StateGraph, END
 from langchain_core.runnables import (
     RunnablePassthrough,
@@ -23,6 +24,10 @@ from node import (
     route_to_cultures,
     compose_final_response,
 )
+
+# You need to make sure DEFAULT_EXPERTS is imported or defined too
+from experts import DEFAULT_EXPERTS  # <- if it’s in another file
+
 def create_cultural_graph(cultures: Optional[List[str]] = None):
     """
     Creates a cultural graph for analyzing cultural sensitivities across different cultures.
@@ -44,11 +49,6 @@ def create_cultural_graph(cultures: Optional[List[str]] = None):
     builder.add_node("router", route_to_cultures)
     builder.add_node("compose", compose_final_response)
 
-    # Cultural expert nodes
-    for culture in cultures:
-        if culture not in DEFAULT_EXPERTS:
-            raise ValueError(f"No expert implementation for culture: {culture}")
-        builder.add_node(f"expert_{culture}", DEFAULT_EXPERTS[culture])
 
     # Graph transitions
     builder.add_conditional_edges(
@@ -56,25 +56,18 @@ def create_cultural_graph(cultures: Optional[List[str]] = None):
         lambda state: [state["__next__"]] if "__next__" in state else [],
         ["sensitivity_check", "router", "compose"]
     )
-
     builder.add_edge("sensitivity_check", "extract_topics")
     builder.add_edge("extract_topics", "router")
-
-    builder.add_edge( "router","planner")
-
-    builder.add_edge( "planner","compose")
-
-
-
+    builder.add_edge("router", "planner")
+    builder.add_edge("planner", "compose")
     builder.add_edge("compose", END)
 
+    # Save checkpoints
     os.makedirs("./data/graph_checkpoints", exist_ok=True)
     db_path = os.path.join(".", "data", "graph_checkpoints", "checkpoints.sqlite")
     conn = sqlite3.connect(db_path, check_same_thread=False)
     memory = SqliteSaver(conn)
 
-    return builder.compile()
-
-    return builder.compile()
-    main_graph = builder.compile(
-    checkpointer=memory)
+    # --- The missing part: compile and return the graph ---
+    graph = builder.compile(checkpointer=memory)
+    return graph
