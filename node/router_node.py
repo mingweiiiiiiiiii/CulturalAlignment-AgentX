@@ -4,7 +4,7 @@ from typing import Dict, List, Any
 import ollama
 
 # Mocked classes (replace with your real imports)
-from cultural_expert_node import LLMModel, USExpert, ChineseExpert, IndianExpert
+from cultural_expert_node import CulturalExpertManager,LLMModel
 from sen_agent_node import determine_cultural_sensitivity
 
 # === Embedding Function ===
@@ -25,11 +25,10 @@ def route_to_cultures(
 
     # Setup experts
     llm_model = LLMModel()
-    expert_instances = {
-        "US": USExpert(llm_model),
-        "China": ChineseExpert(llm_model),
-        "India": IndianExpert(llm_model)
-    }
+    manager = CulturalExpertManager(llm_model)
+
+    # Generate experts
+    expert_instances = manager.generate_expert_instances()
     expert_list = list(expert_instances.keys())
 
     # Sensitivity detection
@@ -128,7 +127,6 @@ if __name__ == "__main__":
             "preferences": {}
         }
     }
-
     output = route_to_cultures(
         state=input_state,
         top_k=2
