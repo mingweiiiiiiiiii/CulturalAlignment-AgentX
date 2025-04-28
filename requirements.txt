@@ -1,23 +1,25 @@
-# Core dependencies
-langgraph==0.3.31
-transformers==4.51.3
-numpy<2.0.0
-torch==2.2.2
-scikit-learn==1.6.1
-
-# LLM API clients
-huggingface-hub==0.30.2
-python-dotenv==1.1.0
-google-generativeai>=0.3.0
-langchain-groq>=0.0.5
-
-# Data handling
-pyyaml==6.0.2
-pandas==2.2.3
-
-# Vector database
-milvus-lite==2.4.12
-
-# Testing
-pytest>=7.0.0
-pytest-mock>=3.10.0
+fastapi==0.104.1
+uvicorn>=0.26.0
+python-multipart==0.0.6
+langchain_core>=0.3.15
+langchain_openai==0.2.1
+langchain_anthropic==0.2.1
+langchain_groq==0.2.1
+langchain_cerebras==0.3.0
+langchain_google_genai>=1.0.0
+langchain_huggingface_hub>=0.0.11
+langgraph==0.2.28
+langgraph.checkpoint.sqlite==1.0.4
+pydantic==2.9.2
+python-dotenv==1.0.1
+varname==0.13.5
+markdownify==0.13.1
+pytest>=8.1.1
+hypothesis>=6.88.0
+pymongo==4.10.1
+google-generativeai>=0.3.2
+numpy
+matplotlib
+pymilvus>=2.2.10
+mistralai
+torch  # <-- added PyTorch here
