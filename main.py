@@ -40,7 +40,7 @@ def main():
     thread = {"configurable": {"thread_id": "unique_thread_id"}}
     
     # Get response from debate agent
-    response = create_cultural_graph(state=initial_state)
+    response = my_cultural_graph_workflow.run(state=initial_state)
 
 
  

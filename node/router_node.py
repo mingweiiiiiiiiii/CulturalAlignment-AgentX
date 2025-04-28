@@ -4,8 +4,8 @@ from typing import Dict, List, Any
 import ollama
 
 # Mocked classes (replace with your real imports)
-from cultural_expert_node import CulturalExpertManager,LLMModel
-from sen_agent_node import determine_cultural_sensitivity
+from node.cultural_expert_node import CulturalExpertManager,LLMModel
+from node.sen_agent_node import determine_cultural_sensitivity
 
 # === Embedding Function ===
 def embed_persona(persona: Dict[str, Any]) -> np.ndarray:
