@@ -1,26 +1,22 @@
 import numpy as np
 import re
 from abc import ABC, abstractmethod
-from typing import Dict, List, Callable
-
-# Dummy GraphState type for type hinting (adjust as needed)
-GraphState = Dict[str, Dict]
-
+from typing import Dict
 from google import genai
 
-
-
+# === LLM Model Wrapper ===
 class LLMModel:
-    def __init__(self, api_key: str, model_name: str):
-        self.client = genai.Client(api_key=api_key)
-        self.model_name = model_name
+    def __init__(self):
+        self.api_key = "AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"
+        self.model_name = "gemini-2.0-flash"
+        self.client = genai.Client(api_key=self.api_key)
 
     def generate(self, prompt: str) -> str:
         response = self.client.models.generate_content(
             model=self.model_name,
             contents=prompt
         )
-        return response.text.strip()  # Only return clean text
+        return response.text.strip()
 
 # === Cultural Expert Abstract Base Class ===
 class CulturalExpert(ABC):
@@ -36,10 +32,10 @@ class CulturalExpert(ABC):
         prompt = self.enhance_prompt(question)
         return self.model.generate(prompt)
 
-    def __call__(self, state: GraphState) -> str:
+    def __call__(self, state) -> str:
         question = state["question_meta"]["original"]
         response_text = self.generate_response(question)
-        return response_text  # Return only clean text directly
+        return response_text
 
 # === Cultural Expert Implementations ===
 class USExpert(CulturalExpert):
@@ -83,11 +79,8 @@ class IndianExpert(CulturalExpert):
 
 # === Example Usage Setup ===
 if __name__ == "__main__":
-    API_KEY = "AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"
-    MODEL_NAME = "gemini-2.0-flash"
-
-    # Initialize shared model instance
-    llm_model = LLMModel(api_key=API_KEY, model_name=MODEL_NAME)
+    # Initialize model inside the class
+    llm_model = LLMModel()
 
     # Create expert instances
     expert_classes = {
