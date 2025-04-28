@@ -9,9 +9,9 @@ class PersonaSampler:
         base_dir = os.path.dirname(os.path.dirname(__file__))  # go up to root of your repo
 
         if wvs_path is None:
-            wvs_path = os.path.join(base_dir, "dataset", "wvs_questions.json")
+            wvs_path = os.path.join(base_dir, "corpoa", "wvs_questions.json")
         if persona_path is None:
-            persona_path = os.path.join(base_dir, "dataset", "persona_data_list.json")
+            persona_path = os.path.join(base_dir, "corpoa", "persona_data_list.json")
 
         self.question_to_options = self._load_wvs_questions(wvs_path)
         self.sampling_fields = self._load_persona_template(persona_path)

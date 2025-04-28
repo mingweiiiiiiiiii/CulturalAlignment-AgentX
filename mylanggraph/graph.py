@@ -1,4 +1,20 @@
 from langgraph.graph import StateGraph, END
+from langchain_core.runnables import (
+    RunnablePassthrough,
+    RunnableParallel,
+    RunnableLambda,
+)
+import os
+import sqlite3
+from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.graph import START, END, StateGraph
+from pydantic import BaseModel, Field
+import asyncio
+
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+
 from custom_types import GraphState
 from node import (
     planner_agent,
@@ -6,18 +22,7 @@ from node import (
     extract_sensitive_topics,
     route_to_cultures,
     compose_final_response,
-    USExpert,
-    ChineseExpert,
-    IndianExpert,
 )
-
-# === Culture Definitions ===
-DEFAULT_EXPERTS = {
-    "US": USExpert(),
-    "China": ChineseExpert(),
-    "India": IndianExpert(),
-}
-
 def create_cultural_graph(cultures: Optional[List[str]] = None):
     """
     Creates a cultural graph for analyzing cultural sensitivities across different cultures.
@@ -63,4 +68,13 @@ def create_cultural_graph(cultures: Optional[List[str]] = None):
 
     builder.add_edge("compose", END)
 
+    os.makedirs("./data/graph_checkpoints", exist_ok=True)
+    db_path = os.path.join(".", "data", "graph_checkpoints", "checkpoints.sqlite")
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+    memory = SqliteSaver(conn)
+
     return builder.compile()
+
+    return builder.compile()
+    main_graph = builder.compile(
+    checkpointer=memory)
