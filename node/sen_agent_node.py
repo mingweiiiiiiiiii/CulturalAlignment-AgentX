@@ -1,5 +1,4 @@
 import numpy as np
-import re
 from typing import Dict
 import ollama
 from sklearn.metrics.pairwise import cosine_similarity
@@ -27,7 +26,6 @@ reference_bank = {
     "Are Latinos always passionate?": "medium",
     "Tell me about French cuisine.": "low",
     "Why do some African tribes still exist today?": "high",
-    
     # NEW - Specific to her
     "Why do old people refuse to adapt to technology?": "high",
     "Is it worth talking to someone who's 95 years old?": "high",
@@ -59,17 +57,23 @@ reference_bank = {
 sensitivity_scale = {"low": 3, "medium": 6, "high": 9}
 
 # === Precompute reference embeddings (flattened) ===
-reference_embeddings = {}
-for q in reference_bank:
-    emb = ollama.embed(model="mxbai-embed-large", input=q)["embeddings"]
-    reference_embeddings[q] = np.array(emb).flatten()
+try:
+    reference_embeddings = {}
+    for q in reference_bank:
+        emb = ollama.embed(model="mxbai-embed-large", input=q)["embeddings"]
+        reference_embeddings[q] = np.array(emb).flatten()   
 
-reference_matrix = np.stack(list(reference_embeddings.values()))
+    reference_matrix = np.stack(list(reference_embeddings.values()))
+except Exception as e:
+    print(f"An error occurred: {e}")
+
 
 # === Determine cultural sensitivity ===
 def determine_cultural_sensitivity(state) -> Dict:
     question = state["question_meta"]["original"]
-    question_embedding = np.array(ollama.embed(model="mxbai-embed-large", input=question)["embeddings"]).flatten()
+    question_embedding = np.array(
+        ollama.embed(model="mxbai-embed-large", input=question)["embeddings"]
+    ).flatten()
 
     # Calculate cosine similarity between the input and all references
     sims = cosine_similarity(question_embedding.reshape(1, -1), reference_matrix)[0]
@@ -89,21 +93,34 @@ def determine_cultural_sensitivity(state) -> Dict:
             **state["question_meta"],
             "is_sensitive": sensitivity_score >= 5,
             "sensitivity_score": sensitivity_score,
-            "nearest_sensitive_example": best_match
+            "nearest_sensitive_example": best_match,
         },
-        "current_state": "sensitivity_check"
+        "current_state": "sensitivity_check",
     }
+
 
 # === Test ===
 if __name__ == "__main__":
-    mock_state = {
-        "question_meta": {
-            "original": "Why do women complain so much?"
-        }
-    }
+    mock_state = {"question_meta": {"original": "Why do women complain so much?"}}
     print("Starting sensitivity check...")
     try:
         result = determine_cultural_sensitivity(mock_state)
         print(result)
     except Exception as e:
         print(f"An error occurred: {e}")
+
+def extract_sensitive_topics(text):
+    """
+    Extract potentially sensitive topics from the given text.
+    
+    Args:
+        text (str): The input text to analyze
+        
+    Returns:
+        list: A list of sensitive topics found in the text
+    """
+    # Implementation of the function
+    # This is just a placeholder - you'll need to implement the actual logic
+    sensitive_topics = []
+    # Your logic to extract sensitive topics
+    return sensitive_topics

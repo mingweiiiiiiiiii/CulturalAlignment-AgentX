@@ -2,16 +2,17 @@ import os
 import json
 import random
 
+
 class PersonaSampler:
-    def __init__(self, 
-                 wvs_path=None, 
-                 persona_path=None):
-        base_dir = os.path.dirname(os.path.dirname(__file__))  # go up to root of your repo
+    def __init__(self, wvs_path=None, persona_path=None):
+        base_dir = os.path.dirname(
+            os.path.dirname(__file__)
+        )  # go up to root of your repo
 
         if wvs_path is None:
-            wvs_path = os.path.join(base_dir, "corpoa", "wvs_questions.json")
+            wvs_path = os.path.join(base_dir, "corpora", "wvs_questions.json")
         if persona_path is None:
-            persona_path = os.path.join(base_dir, "corpoa", "persona_data_list.json")
+            persona_path = os.path.join(base_dir, "corpora", "persona_data_list.json")
 
         self.question_to_options = self._load_wvs_questions(wvs_path)
         self.sampling_fields = self._load_persona_template(persona_path)
@@ -21,15 +22,18 @@ class PersonaSampler:
     # -------------------------------
     def _load_wvs_questions(self, path):
         try:
-            with open(path, 'r', encoding='utf-8') as file:
+            with open(path, "r", encoding="utf-8") as file:
                 data = json.load(file)
         except Exception as e:
-            raise RuntimeError(f"Failed to load WVS questions from {path}: {e}")
+            print(f"Failed to load WVS questions from {path}: {e}")
+            return {}
 
         question_to_options = {}
         for qid, content in data.items():
             if "options" not in content or "questions" not in content:
-                raise KeyError(f"Missing 'options' or 'questions' in WVS data for qid: {qid}")
+                raise KeyError(
+                    f"Missing 'options' or 'questions' in WVS data for qid: {qid}"
+                )
             options = content.get("options", [])
             for question in content.get("questions", []):
                 question_to_options[question] = options
@@ -39,8 +43,12 @@ class PersonaSampler:
     # Load persona.json template and parse sampling fields
     # -------------------------------
     def _load_persona_template(self, path):
-        with open(path, 'r', encoding='utf-8') as f:
-            persona_list = json.load(f)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                persona_list = json.load(f)
+        except Exception as e:
+            persona_list = []
+            print(f"Failed to load persona template from {path}: {e}")
         return persona_list
 
     # -------------------------------
@@ -95,6 +103,7 @@ Answer by typing the number corresponding to your chosen answer."""
 Question: {question}
 Options:
 {options_text}"""
+
 
 # Example usage
 if __name__ == "__main__":
