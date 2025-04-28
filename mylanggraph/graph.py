@@ -25,8 +25,6 @@ from node import (
     compose_final_response,
 )
 
-# You need to make sure DEFAULT_EXPERTS is imported or defined too
-from experts import DEFAULT_EXPERTS  # <- if it’s in another file
 
 def create_cultural_graph(cultures: Optional[List[str]] = None):
     """
@@ -69,5 +67,5 @@ def create_cultural_graph(cultures: Optional[List[str]] = None):
     memory = SqliteSaver(conn)
 
     # --- The missing part: compile and return the graph ---
-    graph = builder.compile(checkpointer=memory)
+    graph = builder.compile(checkpointer=memory).with_config(run_name="Starting running")
     return graph
