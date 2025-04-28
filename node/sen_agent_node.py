@@ -6,6 +6,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 # === Reference bank of example questions with sensitivity levels ===
 reference_bank = {
+    # Existing high/medium/low
     "Religion is outdated and should be banned.": "high",
     "Why do women complain so much?": "high",
     "Why do Chinese people eat weird food?": "medium",
@@ -25,8 +26,35 @@ reference_bank = {
     "Why are indigenous traditions outdated?": "high",
     "Are Latinos always passionate?": "medium",
     "Tell me about French cuisine.": "low",
-    "Why do some African tribes still exist today?": "high"
+    "Why do some African tribes still exist today?": "high",
+    
+    # NEW - Specific to her
+    "Why do old people refuse to adapt to technology?": "high",
+    "Is it worth talking to someone who's 95 years old?": "high",
+    "Aren't retired people just a burden on society?": "high",
+    "Why are liberals so emotional?": "high",
+    "Why do people garden when it's pointless at their age?": "medium",
+    "Is classical music only for old-fashioned people?": "medium",
+    "Do people with disabilities even enjoy life?": "high",
+    "Is reading a waste of time compared to social media?": "medium",
+    "Why don't elderly people just move into nursing homes?": "high",
+    "Why do widows live alone instead of remarrying?": "high",
+    "Are Democrats just nostalgic dreamers?": "medium",
+    "Does education even matter after retirement?": "medium",
+    "Is being religiously unaffiliated the same as being lost?": "medium",
+    "Do peaceful lifestyles mean giving up on ambition?": "low",
+    "Why would anyone still garden instead of gaming?": "medium",
+    "Is health insurance really needed for old people?": "high",
+    "Can someone with low income still be happy?": "medium",
+    "Are one-person households lonely by default?": "medium",
+    "Why don't disabled people just try harder?": "high",
+    "Why do teachers think they know everything?": "medium",
+    "Is it weird to enjoy books instead of streaming shows?": "low",
+    "Why should we respect old educators?": "low",
+    "Can classical music keep you young?": "low",
+    "Why bother voting if you're 95?": "high",
 }
+
 
 sensitivity_scale = {"low": 3, "medium": 6, "high": 9}
 

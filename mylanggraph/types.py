@@ -44,10 +44,7 @@ class GraphState(TypedDict, total=False):
         activate_router (bool): Flag to enable routing functionality.
         activate_judge (bool): Flag to enable judging functionality.
         activate_compose (bool): Flag to enable composition functionality.
-        db_action (Optional[str]): Database action to be performed.
-        db_key (Optional[str]): Key for database operations.
-        db_value (Optional[Any]): Value for database operations.
-        db_result (Optional[Any]): Result from database operations.
+       
         current_state (str): Current state in the workflow.
     """
     question_meta: QuestionMeta
@@ -62,9 +59,5 @@ class GraphState(TypedDict, total=False):
     activate_judge: bool
     activate_compose: bool
 
-    db_action: Optional[str]
-    db_key: Optional[str]
-    db_value: Optional[Any]
-    db_result: Optional[Any]
 
     current_state: str

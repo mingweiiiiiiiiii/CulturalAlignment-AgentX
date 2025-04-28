@@ -1,4 +1,21 @@
+from typing import Optional, List  
 from langgraph.graph import StateGraph, END
+from langchain_core.runnables import (
+    RunnablePassthrough,
+    RunnableParallel,
+    RunnableLambda,
+)
+import os
+import sqlite3
+from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.graph import START, END, StateGraph
+from pydantic import BaseModel, Field
+import asyncio
+
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+
 from custom_types import GraphState
 from node import (
     planner_agent,
@@ -6,17 +23,8 @@ from node import (
     extract_sensitive_topics,
     route_to_cultures,
     compose_final_response,
-    USExpert,
-    ChineseExpert,
-    IndianExpert,
 )
 
-# === Culture Definitions ===
-DEFAULT_EXPERTS = {
-    "US": USExpert(),
-    "China": ChineseExpert(),
-    "India": IndianExpert(),
-}
 
 def create_cultural_graph(cultures: Optional[List[str]] = None):
     """
@@ -39,11 +47,6 @@ def create_cultural_graph(cultures: Optional[List[str]] = None):
     builder.add_node("router", route_to_cultures)
     builder.add_node("compose", compose_final_response)
 
-    # Cultural expert nodes
-    for culture in cultures:
-        if culture not in DEFAULT_EXPERTS:
-            raise ValueError(f"No expert implementation for culture: {culture}")
-        builder.add_node(f"expert_{culture}", DEFAULT_EXPERTS[culture])
 
     # Graph transitions
     builder.add_conditional_edges(
@@ -51,15 +54,18 @@ def create_cultural_graph(cultures: Optional[List[str]] = None):
         lambda state: [state["__next__"]] if "__next__" in state else [],
         ["sensitivity_check", "router", "compose"]
     )
-
     builder.add_edge("sensitivity_check", "extract_topics")
     builder.add_edge("extract_topics", "router")
-
-    builder.add_conditional_edges(
-        "router",
-        route_to_cultures, 
-    )
-
+    builder.add_edge("router", "planner")
+    builder.add_edge("planner", "compose")
     builder.add_edge("compose", END)
 
-    return builder.compile()
+    # Save checkpoints
+    os.makedirs("./data/graph_checkpoints", exist_ok=True)
+    db_path = os.path.join(".", "data", "graph_checkpoints", "checkpoints.sqlite")
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+    memory = SqliteSaver(conn)
+
+    # --- The missing part: compile and return the graph ---
+    graph = builder.compile(checkpointer=memory).with_config(run_name="Starting running")
+    return graph
