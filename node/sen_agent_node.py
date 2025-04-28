@@ -1,5 +1,6 @@
-import numpy as np
 from typing import Dict
+
+import numpy as np
 import ollama
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -61,7 +62,7 @@ try:
     reference_embeddings = {}
     for q in reference_bank:
         emb = ollama.embed(model="mxbai-embed-large", input=q)["embeddings"]
-        reference_embeddings[q] = np.array(emb).flatten()   
+        reference_embeddings[q] = np.array(emb).flatten()
 
     reference_matrix = np.stack(list(reference_embeddings.values()))
 except Exception as e:
@@ -76,7 +77,8 @@ def determine_cultural_sensitivity(state) -> Dict:
     ).flatten()
 
     # Calculate cosine similarity between the input and all references
-    sims = cosine_similarity(question_embedding.reshape(1, -1), reference_matrix)[0]
+    sims = cosine_similarity(
+        question_embedding.reshape(1, -1), reference_matrix)[0]
 
     # Map reference questions to similarity scores
     sims_dict = dict(zip(reference_bank.keys(), sims))
@@ -86,7 +88,8 @@ def determine_cultural_sensitivity(state) -> Dict:
     base_score = sensitivity_scale.get(reference_bank[best_match], 0)
 
     # Adjust final score
-    sensitivity_score = min(10, max(0, int(base_score + 2 * (best_sim - 0.5) * 3)))
+    sensitivity_score = min(
+        10, max(0, int(base_score + 2 * (best_sim - 0.5) * 3)))
 
     return {
         "question_meta": {
@@ -101,7 +104,8 @@ def determine_cultural_sensitivity(state) -> Dict:
 
 # === Test ===
 if __name__ == "__main__":
-    mock_state = {"question_meta": {"original": "Why do women complain so much?"}}
+    mock_state = {"question_meta": {
+        "original": "Why do women complain so much?"}}
     print("Starting sensitivity check...")
     try:
         result = determine_cultural_sensitivity(mock_state)
@@ -109,13 +113,14 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"An error occurred: {e}")
 
+
 def extract_sensitive_topics(text):
     """
     Extract potentially sensitive topics from the given text.
-    
+
     Args:
         text (str): The input text to analyze
-        
+
     Returns:
         list: A list of sensitive topics found in the text
     """
