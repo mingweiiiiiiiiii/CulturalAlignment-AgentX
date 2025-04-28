@@ -1,101 +1,74 @@
 import numpy as np
 from sklearn.cluster import KMeans
 from typing import Dict, List, Any
-import random
 import ollama
 
-# 🆕 Import the sensitivity check function
+# Mocked classes (replace with your real imports)
+from cultural_expert_node import CulturalExpertManager,LLMModel
 from sen_agent_node import determine_cultural_sensitivity
 
-# ===============================
-# 🚀 Embedding Function
-# ===============================
+# === Embedding Function ===
 def embed_persona(persona: Dict[str, Any]) -> np.ndarray:
-    """Embed a persona dictionary into a vector using Ollama embedding."""
-    if not isinstance(persona, dict):
-        raise TypeError("Persona must be a dictionary.")
-
-    for k, v in persona.items():
-        if not isinstance(k, str):
-            raise TypeError("All keys must be strings.")
-        if not isinstance(v, (str, int, float)):
-            raise TypeError("All values must be string, int, or float.")
-
     text = ", ".join(f"{k}: {v}" for k, v in persona.items())
     response = ollama.embed(model="mxbai-embed-large", input=text)
+    return np.array(response["embeddings"][0])  # ✅ Corrected here
 
-    if "embeddings" not in response:
-        raise KeyError(f"'embeddings' not found in response: {response}")
-    
-    embedding = np.array(response["embeddings"][0])
-
-    if embedding.ndim != 1:
-        raise ValueError(f"Expected 1D embedding vector, got shape {embedding.shape}")
-
-    return embedding
-
-# ===============================
-# 🛠️ Routing Function
-# ===============================
-class GraphState(dict):
-    """A simple extension of dict for holding graph states."""
-    pass
-
+# === Router Function ===
 def route_to_cultures(
-    state, 
-    expert_list: List[str],
-    expert_embeddings: np.ndarray,
-    prompt_libraries: Dict[str, List[str]],
+    state: Dict[str, Any],
     lambda_1: float = 0.6,
     lambda_2: float = 0.4,
     top_k: int = 3,
     tau: float = -30.0,
     precomputed_centroids: np.ndarray = None
-) -> Dict:
-    """Top-k Cultural Expert Routing with fallback clustering."""
+) -> List[Dict[str, Any]]:
 
-    # 🛠️ Correctly update the original state with sensitivity info
+    # Setup experts
+    llm_model = LLMModel()
+    manager = CulturalExpertManager(llm_model)
+
+    # Generate experts
+    expert_instances = manager.generate_expert_instances()
+    expert_list = list(expert_instances.keys())
+
+    # Sensitivity detection
     sensitivity_info = determine_cultural_sensitivity(state)
-    state.update(sensitivity_info)
+    state["question_meta"].update(sensitivity_info["question_meta"])
 
+    # Prepare input
     q = state["question_meta"]["original"]
-    user_profile = state["user_profile"]
-    user_embedding = state["user_embedding"]
+    user_profile = state["user_profile"]["demographics"]
+    user_embedding = embed_persona(user_profile)
     sensitive_topics = state["question_meta"].get("sensitive_topics", [])
 
-    # 🆙 Adjust parameters based on sensitivity score
-    sensitivity_score = state["question_meta"].get("sensitivity_score", 0)
-    if sensitivity_score >= 8:
-        tau = -10.0
-        top_k = min(top_k, 2)
-    elif sensitivity_score >= 5:
-        tau = -20.0
-    else:
-        tau = -30.0
+    # Step 1: Embed experts
+    dict_expert_embeddings = {}
+    dict_expert_prompt_text = {}
 
-    inv_lambda = 1.0 / (lambda_1 + lambda_2)
+    for expert_name in expert_list:
+        expert = expert_instances[expert_name]
+        generated_response = expert.generate_response(q)
+        dict_expert_embeddings[expert_name] = embed_persona({"response": generated_response})
+        dict_expert_prompt_text[expert_name] = generated_response
 
-    # Embed topics
+    expert_embeddings = np.stack(list(dict_expert_embeddings.values()))
+
+    # Step 2: Topic embedding
     if sensitive_topics:
-        topic_embeddings = [embed_persona({
-            "sex": "N/A", "age": 30, "marital_status": "N/A",
-            "education": "N/A", "employment_sector": "N/A",
-            "social_class": "N/A", "income_level": "N/A",
-            "ethnicity": "N/A", "country": topic
-        }) for topic in sensitive_topics]
+        topic_embeddings = [embed_persona({"country": topic}) for topic in sensitive_topics]
     else:
         topic_embeddings = [user_embedding]
 
     T = np.stack(topic_embeddings)
     t_bar = np.mean(T, axis=0)
-    z = inv_lambda * (lambda_1 * t_bar + lambda_2 * user_embedding)
+    z = (lambda_1 * t_bar + lambda_2 * user_embedding) / (lambda_1 + lambda_2)
 
-    # Distance scoring (Manhattan distance)
+    # Step 3: Score experts
     scores = -np.sum(np.abs(expert_embeddings - z), axis=1)
     top_indices = np.argsort(scores)[-top_k:][::-1]
     s_top = scores[top_indices]
 
-    # Fallback to cluster centroids if needed
+    # Step 4: Fallback if needed
     if np.max(s_top) < tau:
         if precomputed_centroids is None:
             kmeans = KMeans(n_clusters=3, random_state=0, n_init='auto')
@@ -104,89 +77,61 @@ def route_to_cultures(
         else:
             centroids = precomputed_centroids
 
-        closest_cluster_idx = np.argmin(np.sum(np.abs(centroids - user_embedding), axis=1))
-        z = centroids[closest_cluster_idx]
+        closest_centroid_idx = np.argmin(np.linalg.norm(user_embedding - centroids, axis=1))
+        closest_centroid = centroids[closest_centroid_idx]
 
-        scores = -np.sum(np.abs(expert_embeddings - z), axis=1)
+        scores = -np.sum(np.abs(expert_embeddings - closest_centroid), axis=1)
         top_indices = np.argsort(scores)[-top_k:][::-1]
         s_top = scores[top_indices]
 
-    # Numerically stable softmax
+    # Step 5: Softmax normalize
     s_max = np.max(s_top)
     logits = np.clip(s_top - s_max, -100, 100)
     softmax_weights = np.exp(logits) / np.sum(np.exp(logits))
 
-    # Assemble prompts
-    A = []
+    # Step 6: Generate selected expert set
+    selected_experts = []
     for i, idx in enumerate(top_indices):
         culture = expert_list[idx]
         weight = softmax_weights[i]
-        topic_for_prompt = sensitive_topics[0] if sensitive_topics else "general"
+        prompt_text = dict_expert_prompt_text[culture]  # ✅ Correct fetching prompt
+        selected_experts.append({
+            "culture": culture,
+            "weight": float(weight),
+            "prompt": prompt_text
+        })
 
-        # Select real prompt from library
-        base_prompt = random.choice(prompt_libraries[culture])
+    return selected_experts
 
-        # Combine with user info without formatting the real prompt
-        prompt = f"User profile: {user_profile}\nQuery: {q}\nTopic: {topic_for_prompt}\n\n{base_prompt}"
-
-        A.append((culture, weight, prompt))
-
-    relevant_cultures = [culture for culture, _, _ in A]
-
-    # Update state
-    state.update({
-        "question_meta": {
-            **state["question_meta"],
-            "relevant_cultures": relevant_cultures
-        },
-        "current_state": "router",
-        "expert_weights_and_prompts": A
-    })
-
-    return state
-
-# ===============================
-# 🧪 Test Case
-# ===============================
+# === Test Case ===
 if __name__ == "__main__":
-    user_profile = {
-        "sex": "female",
-        "age": 27,
-        "marital_status": "single",
-        "education": "PhD",
-        "employment_sector": "Healthcare",
-        "social_class": "upper",
-        "income_level": "high",
-        "ethnicity": "Latina",
-        "country": "Spain"
-    }
-
-    expert_list = [f"Culture_{i}" for i in range(5)]
-    expert_embeddings = np.random.rand(5, 1024)
-    prompt_libraries = {
-        culture: [
-            f"Discuss leadership values from the {culture} perspective.",
-            f"Describe how cultural background shapes leadership in {culture}."
-        ] for culture in expert_list
-    }
-    user_embedding = np.random.rand(1024)
-
-    state = GraphState({
+    input_state = {
         "question_meta": {
-            "original": "Why do women complain so much?",  # <-- sensitive question
-            "sensitive_topics": ["Spain", "Mexico"]
+            "original": "How should conflicts be resolved in a community?",
+            "sensitive_topics": [],
+            "relevant_cultures": []
         },
-        "user_profile": user_profile,
-        "user_embedding": user_embedding
-    })
-
-    updated_state = route_to_cultures(
-        state,
-        expert_list,
-        expert_embeddings,
-        prompt_libraries
+        "user_profile": {
+            "id": "user123",
+            "demographics": {
+                "sex": "Female",
+                "age": 28,
+                "marital_status": "Single",
+                "education": "Master's Degree",
+                "employment_sector": "Healthcare",
+                "social_class": "Middle",
+                "income_level": "Medium",
+                "ethnicity": "Asian",
+                "country": "India"
+            },
+            "preferences": {}
+        }
+    }
+    output = route_to_cultures(
+        state=input_state,
+        top_k=2
     )
 
-    print("\n✅ Updated State after Routing:")
-    for key, value in updated_state.items():
-        print(f"{key}: {value}")
+    print("\n=== Selected Experts ===")
+    for expert in output:
+        print(f"\nCulture: {expert['culture']}\nWeight: {expert['weight']:.4f}\nPrompt:\n{expert['prompt']}")
