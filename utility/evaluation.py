@@ -1,10 +1,11 @@
-rtsso
+# rtsso
 # Load BERT model and tokenizer for scoring and embedding
-class BERTWrapper:toTokenizer
-import matplotlib.pyplot as pl
+from transformers import  AutoTokenizer, AutoModel
+import torch
+# import matplotlib.pyplot as plt
 
 # Lad BER model and ter for scoring and embedding
-class BERTWrapp:
+class BERTWrapper:
     def __init__(self, model_name="bert-base-uncased"):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModel.from_pretrained(model_name)
@@ -94,14 +95,14 @@ class EvaluationLosses:
         total = sum(self.lambdas[i] * losses[i] for i in range(len(losses)))
         return total
 
-def save_evaluation_chart(metrics):
-    """Generates and saves a chart visualizing the evaluation metrics."""
-    plt.figure(figsize=(10, 5))
-    plt.plot(metrics, marker='o', label='Total Loss')
-    plt.title('Evaluation Metrics Over Time')
-    plt.xlabel('Evaluation Iteration')
-    plt.ylabel('Loss Value')
-    plt.legend()
-    plt.grid()
-    plt.savefig('evaluation_metrics_chart.png')
-    plt.close()
+# def save_evaluation_chart(metrics):
+#     """Generates and saves a chart visualizing the evaluation metrics."""
+#     plt.figure(figsize=(10, 5))
+#     plt.plot(metrics, marker='o', label='Total Loss')
+#     plt.title('Evaluation Metrics Over Time')
+#     plt.xlabel('Evaluation Iteration')
+#     plt.ylabel('Loss Value')
+#     plt.legend()
+#     plt.grid()
+#     plt.savefig('evaluation_metrics_chart.png')
+#     plt.close()
