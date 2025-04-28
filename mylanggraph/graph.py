@@ -55,10 +55,11 @@ def create_cultural_graph(cultures: Optional[List[str]] = None):
     builder.add_edge("sensitivity_check", "extract_topics")
     builder.add_edge("extract_topics", "router")
 
-    builder.add_conditional_edges(
-        "router",
-        route_to_cultures, 
-    )
+    builder.add_edge( "router","planner")
+
+    builder.add_edge( "planner","compose")
+
+
 
     builder.add_edge("compose", END)
 
