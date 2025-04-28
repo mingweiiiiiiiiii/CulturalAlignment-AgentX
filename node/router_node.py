@@ -4,14 +4,16 @@ from typing import Dict, List, Any
 import ollama
 
 # Mocked classes (replace with your real imports)
-from cultural_expert_node import CulturalExpertManager,LLMModel
-from sen_agent_node import determine_cultural_sensitivity
+from node.cultural_expert_node import CulturalExpertManager, LLMModel
+from node.sen_agent_node import determine_cultural_sensitivity
+
 
 # === Embedding Function ===
 def embed_persona(persona: Dict[str, Any]) -> np.ndarray:
     text = ", ".join(f"{k}: {v}" for k, v in persona.items())
     response = ollama.embed(model="mxbai-embed-large", input=text)
     return np.array(response["embeddings"][0])  # ✅ Corrected here
+
 
 # === Router Function ===
 def route_to_cultures(
@@ -20,7 +22,7 @@ def route_to_cultures(
     lambda_2: float = 0.4,
     top_k: int = 3,
     tau: float = -30.0,
-    precomputed_centroids: np.ndarray = None
+    precomputed_centroids: np.ndarray = None,
 ) -> List[Dict[str, Any]]:
 
     # Setup experts
@@ -48,14 +50,18 @@ def route_to_cultures(
     for expert_name in expert_list:
         expert = expert_instances[expert_name]
         generated_response = expert.generate_response(q)
-        dict_expert_embeddings[expert_name] = embed_persona({"response": generated_response})
+        dict_expert_embeddings[expert_name] = embed_persona(
+            {"response": generated_response}
+        )
         dict_expert_prompt_text[expert_name] = generated_response
 
     expert_embeddings = np.stack(list(dict_expert_embeddings.values()))
 
     # Step 2: Topic embedding
     if sensitive_topics:
-        topic_embeddings = [embed_persona({"country": topic}) for topic in sensitive_topics]
+        topic_embeddings = [
+            embed_persona({"country": topic}) for topic in sensitive_topics
+        ]
     else:
         topic_embeddings = [user_embedding]
 
@@ -71,13 +77,15 @@ def route_to_cultures(
     # Step 4: Fallback if needed
     if np.max(s_top) < tau:
         if precomputed_centroids is None:
-            kmeans = KMeans(n_clusters=3, random_state=0, n_init='auto')
+            kmeans = KMeans(n_clusters=3, random_state=0, n_init="auto")
             kmeans.fit(expert_embeddings)
             centroids = kmeans.cluster_centers_
         else:
             centroids = precomputed_centroids
 
-        closest_centroid_idx = np.argmin(np.linalg.norm(user_embedding - centroids, axis=1))
+        closest_centroid_idx = np.argmin(
+            np.linalg.norm(user_embedding - centroids, axis=1)
+        )
         closest_centroid = centroids[closest_centroid_idx]
 
         scores = -np.sum(np.abs(expert_embeddings - closest_centroid), axis=1)
@@ -95,13 +103,12 @@ def route_to_cultures(
         culture = expert_list[idx]
         weight = softmax_weights[i]
         prompt_text = dict_expert_prompt_text[culture]  # ✅ Correct fetching prompt
-        selected_experts.append({
-            "culture": culture,
-            "weight": float(weight),
-            "prompt": prompt_text
-        })
+        selected_experts.append(
+            {"culture": culture, "weight": float(weight), "prompt": prompt_text}
+        )
 
     return selected_experts
+
 
 # === Test Case ===
 if __name__ == "__main__":
@@ -109,7 +116,7 @@ if __name__ == "__main__":
         "question_meta": {
             "original": "How should conflicts be resolved in a community?",
             "sensitive_topics": [],
-            "relevant_cultures": []
+            "relevant_cultures": [],
         },
         "user_profile": {
             "id": "user123",
@@ -122,16 +129,15 @@ if __name__ == "__main__":
                 "social_class": "Middle",
                 "income_level": "Medium",
                 "ethnicity": "Asian",
-                "country": "India"
+                "country": "India",
             },
-            "preferences": {}
-        }
+            "preferences": {},
+        },
     }
-    output = route_to_cultures(
-        state=input_state,
-        top_k=2
-    )
+    output = route_to_cultures(state=input_state, top_k=2)
 
     print("\n=== Selected Experts ===")
     for expert in output:
-        print(f"\nCulture: {expert['culture']}\nWeight: {expert['weight']:.4f}\nPrompt:\n{expert['prompt']}")
+        print(
+            f"\nCulture: {expert['culture']}\nWeight: {expert['weight']:.4f}\nPrompt:\n{expert['prompt']}"
+        )

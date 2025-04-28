@@ -1,22 +1,21 @@
-import os
-import numpy as np
 from typing import Dict, List, Tuple, Any
-from dotenv import load_dotenv
-from google import genai
-
+import google.generativeai as genai
 # Define ExpertResponse type
 ExpertResponse = Dict[str, str]
+
 
 # ===============================
 # 🎯 Compose Final Response
 # ===============================
 class GraphState(dict):
     """A simple extension of dict for holding graph states."""
-    pass
+
+
+
 def compose_final_response(
     state,
     activate_set: List[Tuple[str, float, str]],  # (culture, weight, prompt_j)
-    top_n: int = 3
+    top_n: int = 3,
 ) -> Dict[str, Any]:
     """
     Compose a final response based on multiple cultural expert inputs,
@@ -32,7 +31,8 @@ def compose_final_response(
     top_cultures = sorted(activate_set, key=lambda x: x[1], reverse=True)[:top_n]
 
     expert_responses: List[ExpertResponse] = [
-        {"culture": culture, "response": response} for culture, _, response in top_cultures
+        {"culture": culture, "response": response}
+        for culture, _, response in top_cultures
     ]
 
     # Step 2: Create LLM prompt
@@ -47,7 +47,7 @@ def compose_final_response(
         "\nUser Profile:",
         f"- Demographics: {demographics}",
         f"- Preferences: {preferences}",
-        "\nCulturally Diverse Expert Responses:"
+        "\nCulturally Diverse Expert Responses:",
     ]
 
     for i, resp in enumerate(expert_responses, 1):
@@ -65,12 +65,13 @@ def compose_final_response(
     llm_prompt = "\n".join(prompt_parts)
 
     # Step 3: Generate final composed response
-    GoogleStudio_API_KEY ="AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"
+    GoogleStudio_API_KEY = "AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"
     # Create model
     model = genai.Client(api_key=GoogleStudio_API_KEY)
 
-    final_response = model.models.generate_content(model="gemini-2.0-flash",contents=prompt_parts).text
-
+    final_response = model.models.generate_content(
+        model="gemini-2.0-flash", contents=prompt_parts
+    ).text
 
     # Step 4: Optional soft enforcement (post-process if needed)
     words = final_response.split()
@@ -79,41 +80,52 @@ def compose_final_response(
 
     # Step 5: Update response state
     response_state = state.get("response_state", {})
-    response_state.update({
-        "expert_responses": expert_responses,
-        "final": final_response
-    })
+    response_state.update(
+        {"expert_responses": expert_responses, "final": final_response}
+    )
 
-    return {
-        "response_state": response_state,
-        "current_state": "compose"
-    }
+    return {"response_state": response_state, "current_state": "compose"}
+
 
 # ===============================
 # 🧪 Test Case
 # ===============================
 if __name__ == "__main__":
-    from types import SimpleNamespace
+    pass
 
     # Dummy GraphState simulation
-    state = GraphState({
-        "user_profile": {
-            "preferences": {"language": "English"},
-            "demographics": {"age": 30, "country": "Spain"}
-        },
-        "question_meta": {
-            "original": "How does culture affect negotiation styles?",
-            "sensitive_topics": ["Spain", "Mexico"],
-            "relevant_cultures": ["Spain", "Mexico", "Argentina"]
-        },
-        "response_state": {}
-    })
+    state = GraphState(
+        {
+            "user_profile": {
+                "preferences": {"language": "English"},
+                "demographics": {"age": 30, "country": "Spain"},
+            },
+            "question_meta": {
+                "original": "How does culture affect negotiation styles?",
+                "sensitive_topics": ["Spain", "Mexico"],
+                "relevant_cultures": ["Spain", "Mexico", "Argentina"],
+            },
+            "response_state": {},
+        }
+    )
 
     # Simulated activate_set (router output)
     activate_set = [
-        ("Spain", 0.9, "In Spain, negotiation often involves building personal relationships first."),
-        ("Mexico", 0.8, "Mexican negotiation styles emphasize courtesy and long-term trust."),
-        ("Argentina", 0.7, "Argentinian negotiators are known for strategic flexibility and patience."),
+        (
+            "Spain",
+            0.9,
+            "In Spain, negotiation often involves building personal relationships first.",
+        ),
+        (
+            "Mexico",
+            0.8,
+            "Mexican negotiation styles emphasize courtesy and long-term trust.",
+        ),
+        (
+            "Argentina",
+            0.7,
+            "Argentinian negotiators are known for strategic flexibility and patience.",
+        ),
     ]
 
     output = compose_final_response(state, activate_set, top_n=2)
