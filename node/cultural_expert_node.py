@@ -1,10 +1,8 @@
-import numpy as np
-import re
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Dict
-import random
 from google import genai
 import unittest
+
 
 # === LLM Model Wrapper ===
 class LLMModel:
@@ -15,10 +13,10 @@ class LLMModel:
 
     def generate(self, prompt: str) -> str:
         response = self.client.models.generate_content(
-            model=self.model_name,
-            contents=prompt
+            model=self.model_name, contents=prompt
         )
         return response.text.strip()
+
 
 # === Cultural Expert Base Class ===
 class CulturalExpert(ABC):
@@ -46,6 +44,7 @@ class CulturalExpert(ABC):
         response_text = self.generate_response(question)
         return response_text
 
+
 # === Manager Class for Experts ===
 class CulturalExpertManager:
     def __init__(self, model: LLMModel):
@@ -53,14 +52,12 @@ class CulturalExpertManager:
         self.expert_instances = {}
 
     def generate_expert_instances(self):
-        countries = [
-            "United States", "China", "India", "Japan","Turkey", "Vietnam"
-        ]
+        countries = ["United States", "China", "India", "Japan", "Turkey", "Vietnam"]
         for country in countries:
             self.expert_instances[country] = CulturalExpert(
                 culture_name=f"{country} Culture",
                 model=self.model,
-                country_name=country
+                country_name=country,
             )
         return self.expert_instances
 
@@ -77,6 +74,7 @@ class CulturalExpertManager:
         state = {"question_meta": {"original": question}}
         return expert(state)
 
+
 # === Example Usage ===
 if __name__ == "__main__":
     # Initialize model
@@ -92,8 +90,11 @@ if __name__ == "__main__":
     print(f"Total number of expert instances: {manager.number_of_experts()}")
 
     # Example inference with Kenya expert
-    kenya_response = manager.inference("Kenya", "What are important values when raising children?")
+    kenya_response = manager.inference(
+        "Kenya", "What are important values when raising children?"
+    )
     print(f"\nKenya Expert Response:\n{kenya_response}")
+
 
 # === Unit Test Cases ===
 class TestCulturalExpertManager(unittest.TestCase):
@@ -117,5 +118,6 @@ class TestCulturalExpertManager(unittest.TestCase):
         expert = self.manager.get_expert("Atlantis")  # Non-existent country
         self.assertIsNone(expert)
 
+
 if __name__ == "__main__":
-    unittest.main(argv=['first-arg-is-ignored'], exit=False)
+    unittest.main(argv=["first-arg-is-ignored"], exit=False)
