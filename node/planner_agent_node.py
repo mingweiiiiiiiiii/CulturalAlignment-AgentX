@@ -1,9 +1,8 @@
-import numpy as np
-import re
-from typing import Dict, List
+from typing import Dict
 
 # === Global counter for planner ===
 planner_counter = 0
+
 
 def planner_agent(state) -> Dict:
     """Planner that routes based on current state and graph iteration."""
