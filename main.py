@@ -5,10 +5,10 @@
 
 
 import json
-import random
-
+import pprint
 from mylanggraph.graph import create_cultural_graph
 from utility.inputData import PersonaSampler
+
 
 def main():
     # Step 1: Input (User Profile + Questionnaire)
@@ -25,24 +25,34 @@ def main():
     print(prompt)
 
     # Step 4: Create the cultural graph
-    my_cultural_graph_workflow = create_cultural_graph()
-
-    # Step 5: Prepare initial state
     initial_state = {
         "user_profile": profiles,
-        "question_meta": {
-            "original": question,
-            "options": options
-        },
-       
+        "question_meta": {"original": question, "options": options},
     }
-
-    thread = {"configurable": {"thread_id": "unique_thread_id"}}
-    
-    # Get response from debate agent
-    response = create_cultural_graph(state=initial_state)
+    my_cultural_graph_workflow = create_cultural_graph()
 
 
- 
+    result = my_cultural_graph_workflow.invoke(
+        initial_state,
+        config={
+            "recursion_limit": 200,  # Your existing config
+            "configurable": {  # Add configurable block
+                "thread_id": "1",  # Provide a thread ID
+                # Optionally provide checkpoint_ns or checkpoint_id
+                # "checkpoint_ns": "your_namespace",
+                # "checkpoint_id": "your_checkpoint_id"
+            }
+        }
+    )
+    print("Printing ")
+    pprint.pprint(result["response_state"]["final"])
+
+
+
+   
+    # # Get response from debate agent
+    # response = create_cultural_graph(state=initial_state)
+
+
 if __name__ == "__main__":
     main()

@@ -49,3 +49,6 @@ htmlcov/
 
 # Local development
 .python-version
+
+# persona_data_list.json
+persona_data_list.json

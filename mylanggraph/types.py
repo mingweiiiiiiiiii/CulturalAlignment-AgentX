@@ -6,11 +6,11 @@ from typing_extensions import TypedDict
 # Shared data structures used across the LangGraph pipeline
 
 
-
 class UserProfile(TypedDict, total=False):
     id: str
     demographics: Dict[str, Any]
     preferences: Dict[str, Any]
+
 
 class QuestionMeta(TypedDict, total=False):
     original: str
@@ -19,14 +19,17 @@ class QuestionMeta(TypedDict, total=False):
     sensitive_topics: List[str]
     relevant_cultures: List[str]
 
+
 class ExpertResponse(TypedDict):
     culture: str
     response: str
+
 
 class ResponseState(TypedDict, total=False):
     expert_responses: List[ExpertResponse]
     judged: Optional[str]
     final: Optional[str]
+
 
 class GraphState(TypedDict, total=False):
     """A TypedDict class representing the state of the graph workflow.
@@ -44,9 +47,10 @@ class GraphState(TypedDict, total=False):
         activate_router (bool): Flag to enable routing functionality.
         activate_judge (bool): Flag to enable judging functionality.
         activate_compose (bool): Flag to enable composition functionality.
-       
+
         current_state (str): Current state in the workflow.
     """
+
     question_meta: QuestionMeta
     user_profile: UserProfile
     response_state: ResponseState
@@ -58,6 +62,5 @@ class GraphState(TypedDict, total=False):
     activate_router: bool
     activate_judge: bool
     activate_compose: bool
-
 
     current_state: str

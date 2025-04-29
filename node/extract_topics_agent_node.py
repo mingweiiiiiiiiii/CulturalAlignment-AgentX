@@ -1,11 +1,7 @@
 
-import os
-
 from google import genai
-from dotenv import load_dotenv
-import numpy as np
-import re
 from typing import Dict
+
 
 def extract_sensitive_topics(state) -> Dict:
     question = state["question_meta"]["original"]
@@ -37,11 +33,10 @@ def extract_sensitive_topics(state) -> Dict:
     """
     # Concatenate the prompt with the question and pass it to the GeminiClient
 
-    GoogleStudio_API_KEY ="AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"
+    GoogleStudio_API_KEY = "AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"
     # Create model
     model = genai.Client(api_key=GoogleStudio_API_KEY)
 
-  
     prompt = f"""Identify potentially insensitive language or generalizations in the input.
     Focus on the core subject matter that could potentially involve:
     - stereotypes 
@@ -68,21 +63,25 @@ def extract_sensitive_topics(state) -> Dict:
     {question}
     ```     
     """
-    topics =  model.models.generate_content(model="gemini-2.0-flash",contents=prompt).text
+    topics = model.models.generate_content(
+        model="gemini-2.0-flash", contents=prompt
+    ).text
     return {
-            "question_meta": {**state["question_meta"], "sensitive_topics": topics},
-            "db_action": "write",
-            "db_key": "sensitive_topics",
-            "db_value": topics,
-            "current_state": "extract_topics"
-        }
+        "question_meta": {**state["question_meta"], "sensitive_topics": topics},
+        "db_action": "write",
+        "db_key": "sensitive_topics",
+        "db_value": topics,
+        "current_state": "extract_topics",
+    }
+
+
 if __name__ == "__main__":
     state = {
         "question_meta": {
             "original": "Why do different religions have different dietary restrictions and marriage customs?"
         }
     }
-    
+
     result = extract_sensitive_topics(state)
     topics = result["question_meta"]["sensitive_topics"]
     print("Extracted Topics:", topics)
