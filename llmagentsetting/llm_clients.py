@@ -5,7 +5,9 @@ from google import genai
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 from api_key import germini_api_key, groq_api_key
-
+import os
+import requests
+from llmagentsetting.api_key import lamda_api_key
 
 class GeminiClient:
     def __init__(
@@ -96,6 +98,75 @@ class MistralClient:
         return chat_response.choices[0].message.content.strip()
 
 
+class LamdaAPIClient:
+    MODEL_LIST = [
+        "deepseek-llama3.3-70b",
+        "deepseek-r1-671b",
+        "deepseek-v3-0324",
+        "hermes3-405b",
+        "hermes-3-llama-3.1-405b-fp8",
+        "hermes3-70b",
+        "hermes3-8b",
+        "lfm-40b",
+        "llama-4-maverick-17b-128e-instruct-fp8",
+        "llama-4-scout-17b-16e-instruct",
+        "llama3.1-405b-instruct-fp8",
+        "llama3.1-70b-instruct-fp8",
+        "llama3.1-8b-instruct",
+        "llama3.1-nemotron-70b-instruct-fp8",
+        "llama3.2-11b-vision-instruct",
+        "llama3.2-3b-instruct",
+        "llama3.3-70b-instruct-fp8",
+        "qwen25-coder-32b-instruct"
+    ]
+    DEFAULT_MODEL = "qwen25-coder-32b-instruct"
+
+    def __init__(self, api_key=None, germini_api_key=None):
+        load_dotenv(".env", override=True)
+        self.api_key = api_key or os.getenv("LAMBDA_API") or lamda_api_key
+
+        if not self.api_key:
+            raise ValueError(
+                "Lambda API key must be provided or set in environment variables."
+            )
+
+        os.environ["LAMBDA_API"] = self.api_key
+
+        self.url = "https://api.lambdalabs.com/v1/completions"
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+    def get_completion(self, prompt, model=None) -> str:
+        model = model or self.DEFAULT_MODEL
+        if model not in self.MODEL_LIST:
+            raise ValueError(f"Invalid model name. Choose from:\n{', '.join(self.MODEL_LIST)}")
+        
+        data = {
+            "model": model,
+            "prompt": prompt,
+            "temperature": 0
+        }
+
+        response = requests.post(self.url, headers=self.headers, json=data)
+        response_data = response.json()
+
+        try:
+            return response_data["choices"][0]["text"].strip()
+        except (KeyError, IndexError):
+            return "Error: Unable to extract text from API response."
+
+def test_lambdamain():
+    prompt = input("Enter your prompt: ").strip()
+
+    try:
+        client = LamdaAPIClient()
+        result = client.get_completion(prompt=prompt)
+        print("Generated Text:", result)
+    except ValueError as e:
+        print("Error:", e)
+
 if __name__ == "__main__":
     # myModel = GeminiClient()
     # return_text = myModel.generate("Who are you")
@@ -104,3 +175,5 @@ if __name__ == "__main__":
     myGroq = GroqClient()
     return_text = myGroq.generate("Who are you")
     print(return_text)
+
+    test_lambdamain()
