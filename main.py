@@ -1,58 +1,148 @@
-# main.py
-# Orchestrates the culturally-aware multi-agent dialogue pipeline using LangGraph.
-# This script serves as the entry point for the application, managing user profiles,
-# embedding parameters, and evaluating responses from cultural experts.
-
-
 import json
-import pprint
-from mylanggraph.graph import create_cultural_graph
-from utility.inputData import PersonaSampler
+import math
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from collections import Counter
+
+# Fix path issue if modules aren't found
+import sys
+sys.path.append('.')  # Adjust as needed
+
+from mylanggraph.graph import create_cultural_graph        # Main workflow definition
+from utility.inputData import PersonaSampler                # For user profile/question sampling
+from mylanggraph.types import GraphState                    # Graph state interface
 
 
-def main():
-    # Step 1: Input (User Profile + Questionnaire)
-    sampler = PersonaSampler()
-    profiles = sampler.sample_profiles(n=1)
-    question, options = sampler.sample_question()
-    prompt = sampler.build_prompt(profiles[0], question, options)
-
-    print("\n=== Persona ===")
-    print(json.dumps(profiles, indent=2))
-    print("\n=== Question ===")
-    print(question)
-    print("\n=== Prompt ===")
-    print(prompt)
-
-    # Step 4: Create the cultural graph
-    initial_state = {
-        "user_profile": profiles,
-        "question_meta": {"original": question, "options": options},
-    }
-    my_cultural_graph_workflow = create_cultural_graph()
+def shannon_entropy(labels):
+    """
+    Shannon entropy to measure diversity (e.g., of cultural responses).
+    """
+    total = len(labels)
+    counts = Counter(labels)
+    return -sum((count / total) * math.log2(count / total) for count in counts.values() if count > 0)
 
 
-    result = my_cultural_graph_workflow.invoke(
-        initial_state,
-        config={
-            "recursion_limit": 200,  # Your existing config
-            "configurable": {  # Add configurable block
-                "thread_id": "1",  # Provide a thread ID
-                # Optionally provide checkpoint_ns or checkpoint_id
-                # "checkpoint_ns": "your_namespace",
-                # "checkpoint_id": "your_checkpoint_id"
-            }
-        }
+def evaluate_response(graph_state: GraphState) -> dict:
+    """
+    Computes a rich set of evaluation metrics based on graph output.
+    Metrics include response quality, alignment, diversity, and topic sensitivity.
+    """
+    expert_responses = graph_state.get("response_state", {}).get("expert_responses", [])
+    relevant_cultures = graph_state.get("question_meta", {}).get("relevant_cultures", [])
+    sensitive_topics = graph_state.get("question_meta", {}).get("sensitive_topics", [])
+
+    # Metrics base
+    response_lengths = [len(r.get("content", "")) for r in expert_responses]
+    response_cultures = [r.get("culture", "") for r in expert_responses if r.get("culture")]
+
+    aligned = [c for c in response_cultures if c in relevant_cultures]
+    alignment_distribution = Counter(response_cultures)
+    cultural_alignment_variance = float(np.var([alignment_distribution[c] for c in relevant_cultures])) if relevant_cultures else 0.0
+
+    sensitive_hits = sum(
+        any(t.lower() in r.get("content", "").lower() for t in sensitive_topics)
+        for r in expert_responses
     )
-    print("Printing ")
-    pprint.pprint(result["response_state"]["final"])
+
+    return {
+        "num_expert_responses": len(expert_responses),
+        "avg_response_length": sum(response_lengths) / max(1, len(response_lengths)),
+        "std_response_length": float(np.std(response_lengths)) if response_lengths else 0.0,
+        "response_completeness": sum(
+            1 for r in expert_responses if all(opt.lower() in r.get("content", "").lower() for opt in ['a', 'b', 'c', 'd'])
+        ) / max(1, len(expert_responses)),
+        "cultural_alignment_score": len(aligned) / max(1, len(response_cultures)),
+        "cultural_alignment_variance": cultural_alignment_variance,
+        "unique_cultures": len(set(response_cultures)),
+        "diversity_entropy": shannon_entropy(response_cultures) if response_cultures else 0.0,
+        "sensitivity_coverage": sensitive_hits / max(1, len(sensitive_topics)) if sensitive_topics else 0,
+        "sensitive_topic_mention_rate": sensitive_hits / max(1, len(expert_responses)),
+    }
 
 
+def run_experiments(n=100):
+    """
+    Runs LangGraph for n different simulated personas and logs results.
+    """
+    sampler = PersonaSampler()
+    graph = create_cultural_graph()
+    records = []
 
-   
-    # # Get response from debate agent
-    # response = create_cultural_graph(state=initial_state)
+    for i in range(n):
+        profiles = sampler.sample_profiles(n=1)
+        question, options = sampler.sample_question()
+        options_str = "\n".join([f"{chr(65 + i)}. {opt}" for i, opt in enumerate(options)])
+        merged_question = f"{question}\n\nOptions:\n{options_str}"
+
+        state: GraphState = {
+            "user_profile": profiles,
+            "question_meta": {
+                "original": merged_question,
+                "options": options,
+                "sensitive_topics": [],
+                "relevant_cultures": [],
+            },
+            "response_state": {
+                "expert_responses": [],
+            },
+            "full_history": [],
+            "planner_counter": 0,
+            "activate_sensitivity_check": True,
+            "activate_extract_topics": True,
+            "activate_router": False,
+            "activate_judge": False,
+            "activate_compose": False,
+            "current_state": "planner",
+        }
+
+        result = graph.invoke(state, config={
+            "recursion_limit": 200,
+            "configurable": {"thread_id": str(i)}
+        })
+
+        metrics = evaluate_response(result)
+        records.append({**profiles[0], **metrics})
+
+    return pd.DataFrame(records)
+
+
+def visualize_metrics(df: pd.DataFrame):
+    """
+    Visualizes evaluation metrics via boxplots, bar charts, and a correlation heatmap.
+    """
+    plt.figure(figsize=(10, 5))
+    df.boxplot(column="cultural_alignment_score", by="religion")
+    plt.title("Cultural Alignment Score by Religion")
+    plt.suptitle("")
+    plt.xlabel("Religion")
+    plt.ylabel("Alignment Score")
+    plt.grid(axis='y')
+    plt.tight_layout()
+    plt.show()
+
+    plt.figure(figsize=(10, 5))
+    df.groupby("education")["avg_response_length"].mean().plot(kind='bar')
+    plt.title("Avg Response Length by Education")
+    plt.ylabel("Length")
+    plt.xticks(rotation=45)
+    plt.grid(axis='y')
+    plt.tight_layout()
+    plt.show()
+
+    plt.figure(figsize=(12, 6))
+    corr = df[[
+        "num_expert_responses", "avg_response_length", "std_response_length",
+        "response_completeness", "cultural_alignment_score", "cultural_alignment_variance",
+        "unique_cultures", "diversity_entropy", "sensitivity_coverage", "sensitive_topic_mention_rate"
+    ]].corr()
+    sns.heatmap(corr, annot=True, cmap='coolwarm')
+    plt.title("Correlation Matrix of Evaluation Metrics")
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__ == "__main__":
-    main()
+    df_results = run_experiments(n=100)  
+    visualize_metrics(df_results)
