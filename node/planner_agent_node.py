@@ -17,20 +17,20 @@ def planner_agent(state) -> Dict:
         return {
             **updated_state,
             "activate_sensitivity_check": True,
-            "__next__": "determine_cultural_sensitivity",
+            "__next__": "sensitivity_check",
         }
     elif counter == 2 and state.get("is_sensitive") is True:
         # Second step: Extract sensitive topics
         return {
             **updated_state,
             "activate_extract_topics": True,
-            "__next__": "extract_sensitive_topics",
+            "__next__": "extract_topics",
         }
     elif counter == 2 and state.get("is_sensitive") is False:
         # If not sensitive, go directly to composing
         return {
             **updated_state,
-            "__next__": "compose_final_response",
+            "__next__": "compose",
         }
     elif counter >= 3:
         # After topic extraction and memory hook, route to cultures
@@ -38,11 +38,11 @@ def planner_agent(state) -> Dict:
             return {
                 **updated_state,
                 "activate_router": True,
-                "__next__": "route_to_cultures",
+                "__next__": "router",
             }
         else:
             # Fallback: If no topics extracted, compose response anyway
             return {
                 **updated_state,
-                "__next__": "compose_final_response",
+                "__next__": "compose",
             }

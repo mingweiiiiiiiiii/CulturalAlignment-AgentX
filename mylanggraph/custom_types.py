@@ -1,10 +1,34 @@
 from typing import Optional, Dict, List, Any
 
+# mylanggraph/custom_types.py
+from typing import TypedDict, Optional, List, Dict, Any
 
+class GraphState(TypedDict, total=False):
+    """
+    Schema used for LangGraph state propagation
+    """
+    question_meta: Dict[str, Any]
+    user_profile: Optional[Dict[str, Any]]
+    user_embedding: Optional[List[float]]
+    current_state: str
+    response_state: Dict[str, Any]
+    db_action: Optional[str]
+    db_key: Optional[str]
+    db_value: Optional[Any]
+    __next__: str  # required for conditional branching
+
+    # Add these keys used in your planner_agent
+    planner_counter: int
+    is_sensitive: Optional[bool]
+    activate_sensitivity_check: Optional[bool]
+    activate_extract_topics: Optional[bool]
+    activate_router: Optional[bool]
+    topics_extracted: Optional[bool]
+"""
 class GraphState:
-    """
-    State object for managing conversation flow through the graph
-    """
+    
+    #State object for managing conversation flow through the graph
+    
 
     def __init__(
         self,
@@ -40,4 +64,4 @@ class GraphState:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GraphState":
-        return cls(**data)
+        return cls(**data)"""
