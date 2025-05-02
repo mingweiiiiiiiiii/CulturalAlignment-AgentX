@@ -71,7 +71,6 @@ def extract_sensitive_topics(state) -> Dict:
         "db_action": "write",
         "db_key": "sensitive_topics",
         "db_value": topics,
-        "current_state": "extract_topics",
     }
 
 

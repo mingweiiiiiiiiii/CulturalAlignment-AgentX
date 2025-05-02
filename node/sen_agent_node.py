@@ -98,7 +98,6 @@ def determine_cultural_sensitivity(state) -> Dict:
             "sensitivity_score": sensitivity_score,
             "nearest_sensitive_example": best_match,
         },
-        "current_state": "sensitivity_check",
     }
 
 

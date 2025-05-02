@@ -1,26 +1,19 @@
 from typing import Dict, List, Tuple, Any
 import google.generativeai as genai
+
 # Define ExpertResponse type
 ExpertResponse = Dict[str, str]
 
-
-# ===============================
-# 🎯 Compose Final Response
-# ===============================
-class GraphState(dict):
-    """A simple extension of dict for holding graph states."""
-
-
-
-def compose_final_response(
-    state,
-    activate_set: List[Tuple[str, float, str]],  # (culture, weight, prompt_j)
-    top_n: int = 3,
-) -> Dict[str, Any]:
+#  Compose Final Response
+def compose_final_response(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Compose a final response based on multiple cultural expert inputs,
     aiming for a concise culturally-informed answer within 200 words.
     """
+
+    # Step 0: Get activate_set from router node
+    activate_set: List[Tuple[str, float, str]] = state.get("activate_set", [])
+    top_n = 3
 
     user_profile = state.get("user_profile", {})
     question_meta = state.get("question_meta", {})
@@ -66,12 +59,14 @@ def compose_final_response(
 
     # Step 3: Generate final composed response
     GoogleStudio_API_KEY = "AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"
-    # Create model
-    model = genai.Client(api_key=GoogleStudio_API_KEY)
+    genai.configure(api_key=GoogleStudio_API_KEY)
 
-    final_response = model.models.generate_content(
-        model="gemini-2.0-flash", contents=prompt_parts
-    ).text
+    try:
+        model = genai.GenerativeModel("gemini-2.0-flash")  # Or whichever you intend to use
+        response = model.generate_content(prompt_parts)
+        final_response = response.text
+    except Exception as e:
+        final_response = f"[LLM Error: {str(e)}]"
 
     # Step 4: Optional soft enforcement (post-process if needed)
     words = final_response.split()
@@ -81,11 +76,15 @@ def compose_final_response(
     # Step 5: Update response state
     response_state = state.get("response_state", {})
     response_state.update(
-        {"expert_responses": expert_responses, "final": final_response}
+        {
+            "expert_responses": expert_responses,
+            "final": final_response
+        }
     )
 
-    return {"response_state": response_state, "current_state": "compose"}
-
+    return {
+        "response_state": response_state,
+    }
 
 # ===============================
 # 🧪 Test Case
