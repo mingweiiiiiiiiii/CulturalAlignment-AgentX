@@ -12,7 +12,14 @@ from node.sen_agent_node import determine_cultural_sensitivity
 def embed_persona(persona: Dict[str, Any]) -> np.ndarray:
     text = ", ".join(f"{k}: {v}" for k, v in persona.items())
     response = ollama.embed(model="mxbai-embed-large", input=text)
-    return np.array(response["embeddings"][0])  # ✅ Corrected here
+    embeddings = response.get("embeddings", [])
+
+    if not embeddings:
+        print(f"🔍 Text passed to embedding model:\n{text}")
+        print(f"⚠️ No embeddings returned for text: {text}")
+        return np.zeros(768)  # fallback: return zero vector of expected size
+
+    return np.array(embeddings[0])
 
 
 # === Router Function ===
@@ -39,7 +46,7 @@ def route_to_cultures(
 
     # Prepare input
     q = state["question_meta"]["original"]
-    user_profile = state["user_profile"]["demographics"]
+    user_profile = state.get("user_profile", {})
     user_embedding = embed_persona(user_profile)
     sensitive_topics = state["question_meta"].get("sensitive_topics", [])
 
@@ -107,7 +114,9 @@ def route_to_cultures(
             {"culture": culture, "weight": float(weight), "prompt": prompt_text}
         )
 
-    return selected_experts
+    return {
+    "activate_set": selected_experts  # or whatever key your next node expects
+    }
 
 
 # === Test Case ===

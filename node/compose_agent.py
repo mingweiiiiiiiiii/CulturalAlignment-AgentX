@@ -21,11 +21,11 @@ def compose_final_response(state: Dict[str, Any]) -> Dict[str, Any]:
     demographics = user_profile.get("demographics", {})
 
     # Step 1: Select top-N cultures by weight
-    top_cultures = sorted(activate_set, key=lambda x: x[1], reverse=True)[:top_n]
+    top_cultures = sorted(activate_set, key=lambda x: x["weight"], reverse=True)[:top_n]
 
-    expert_responses: List[ExpertResponse] = [
-        {"culture": culture, "response": response}
-        for culture, _, response in top_cultures
+    expert_responses = [
+    {"culture": item["culture"], "response": item["prompt"]}
+    for item in top_cultures
     ]
 
     # Step 2: Create LLM prompt
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     )
 
     # Simulated activate_set (router output)
-    activate_set = [
+    state["activate_set"] = [
         (
             "Spain",
             0.9,
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         ),
     ]
 
-    output = compose_final_response(state, activate_set, top_n=2)
+    output = compose_final_response(state)
 
     print("\n✅ Composed Final State:")
     for k, v in output.items():
