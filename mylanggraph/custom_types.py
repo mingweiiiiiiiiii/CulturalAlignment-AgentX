@@ -24,6 +24,8 @@ class GraphState(TypedDict, total=False):
     activate_extract_topics: Optional[bool]
     activate_router: Optional[bool]
     topics_extracted: Optional[bool]
+    
+    activate_set: List[Dict[str, Any]]
 """
 class GraphState:
     
