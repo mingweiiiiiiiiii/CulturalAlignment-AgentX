@@ -77,7 +77,7 @@ def run_experiments(n=100):
         merged_question = f"{question}\n\nOptions:\n{options_str}"
 
         state: GraphState = {
-            "user_profile": profiles,
+            "user_profile": profiles[0],
             "question_meta": {
                 "original": merged_question,
                 "options": options,
@@ -96,10 +96,10 @@ def run_experiments(n=100):
             "activate_compose": False,
             "current_state": "planner",
         }
-
         result = graph.invoke(state, config={
             "recursion_limit": 200,
-            "configurable": {"thread_id": str(i)}
+            "configurable": {"thread_id": str(i)},
+            "verbose": True,
         })
 
         metrics = evaluate_response(result)
