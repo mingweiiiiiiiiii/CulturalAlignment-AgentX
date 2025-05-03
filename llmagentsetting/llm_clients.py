@@ -4,10 +4,9 @@ from mistralai import Mistral
 from google import genai
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
-from api_key import germini_api_key, groq_api_key
 import os
 import requests
-from llmagentsetting.api_key import lamda_api_key
+from llmagentsetting.api_key import germini_api_key, groq_api_key, lamda_api_key
 
 class GeminiClient:
     def __init__(
