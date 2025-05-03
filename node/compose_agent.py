@@ -3,7 +3,7 @@ import google.generativeai as genai
 from llmagentsetting import llm_clients
 
 
-
+client = llm_clients.GeminiClient()
 # Define ExpertResponse type
 ExpertResponse = Dict[str, str]
 #  Compose Final Response
@@ -64,7 +64,7 @@ def compose_final_response(state: Dict[str, Any]) -> Dict[str, Any]:
     # genai.configure(api_key=GoogleStudio_API_KEY)
 
     try:
-        response = llm_clients.GeminiClient.generate(prompt_parts)
+        response = client.generate(prompt_parts)
         final_response = response
     except Exception as e:
         final_response = f"[LLM Error: {str(e)}]"
