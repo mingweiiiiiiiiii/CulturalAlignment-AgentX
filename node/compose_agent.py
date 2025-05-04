@@ -1,9 +1,11 @@
 from typing import Dict, List, Tuple, Any
 import google.generativeai as genai
+from llmagentsetting import llm_clients
 
+
+client = llm_clients.GeminiClient()
 # Define ExpertResponse type
 ExpertResponse = Dict[str, str]
-
 #  Compose Final Response
 def compose_final_response(state: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -58,13 +60,12 @@ def compose_final_response(state: Dict[str, Any]) -> Dict[str, Any]:
     llm_prompt = "\n".join(prompt_parts)
 
     # Step 3: Generate final composed response
-    GoogleStudio_API_KEY = "AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"
-    genai.configure(api_key=GoogleStudio_API_KEY)
+    # GoogleStudio_API_KEY = "AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"
+    # genai.configure(api_key=GoogleStudio_API_KEY)
 
     try:
-        model = genai.GenerativeModel("gemini-2.0-flash")  # Or whichever you intend to use
-        response = model.generate_content(prompt_parts)
-        final_response = response.text
+        response = client.generate(prompt_parts)
+        final_response = response
     except Exception as e:
         final_response = f"[LLM Error: {str(e)}]"
 

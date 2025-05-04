@@ -4,7 +4,7 @@ from typing import Dict, List, Any
 import ollama
 
 # Mocked classes (replace with your real imports)
-from node.cultural_expert_node import CulturalExpertManager, LLMModel
+from node.cultural_expert_node import CulturalExpertManager
 from node.sen_agent_node import determine_cultural_sensitivity
 
 
@@ -33,8 +33,8 @@ def route_to_cultures(
 ) -> List[Dict[str, Any]]:
 
     # Setup experts
-    llm_model = LLMModel()
-    manager = CulturalExpertManager(llm_model)
+
+    manager = CulturalExpertManager()
 
     # Generate experts
     expert_instances = manager.generate_expert_instances()

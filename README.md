@@ -4,29 +4,84 @@
 The Cultural Alignment Project is designed to facilitate a culturally-aware multi-agent dialogue pipeline utilizing LangGraph. The primary objective is to analyze cultural sensitivities and generate responses that reflect diverse cultural perspectives.
 
 ## Installation
+
 To set up the project, ensure you have the following packages installed:
 
-```bash
-pip install pymilvus torch transformers matplotlib pyyaml
-```
+### Using `pip` and `venv` (Standard)
 
-## Running the Project
-To initiate the dialogue pipeline, execute the following command in your terminal:
+1.  **Create a virtual environment:**
+    ```bash
+    python -m venv venv
+    ```
+    *(Use `python3` if `python` doesn't point to Python 3)*
 
-```bash
-python main.py
-```
+2.  **Activate the environment:**
+    *   macOS/Linux: `source venv/bin/activate`
+    *   Windows (cmd): `.\venv\Scripts\activate`
+    *   Windows (PowerShell): `.\venv\Scripts\Activate.ps1`
 
-This command will start the dialogue pipeline, sampling user profiles and questions, embedding parameters, and evaluating responses from cultural experts.
+3.  **Install dependencies:**
+    ```bash
+    pip install pymilvus torch transformers matplotlib pyyaml
+    ```
+    *(Alternatively, if a `requirements.txt` file exists: `pip install -r requirements.txt`)*
+
+### Using `uv` (Faster Alternative)
+
+1.  **Install `uv`** (if you haven't already): Follow the official uv installation guide.
+
+2.  **Create and activate the virtual environment:**
+    ```bash
+    uv venv
+    source .venv/bin/activate  # macOS/Linux
+    # .\.venv\Scripts\activate # Windows (cmd)
+    # .\.venv\Scripts\Activate.ps1 # Windows (PowerShell)
+    ```
+
+3.  **Install dependencies using `uv`:**
+    ```bash
+    uv pip install -r requirements.txt
+    ```
+
+ ## Running the Project
+
+### Prerequisite
+
+- **ollama**: Currently this project use ollama to host embedding model, please make sure ollama is installed correctly, and pull `mxbai-embed-large` to be served.
+
+- **`GEMINI API KEY`**: Gemini API key can be generated in [aistudio](https://aistudio.google.com/) after signing up for the service. The API key should be placed in .env (Please refer to .env.example, you can copy the file and put in API key accordingly and rename the file to .env)
+
+- **`GROQ API KEY`**: Groq API key can be generated in [groq](https://groq.com/) after signing up for the service.(Please refer to .env.example, you can copy the file and put in API key accordingly and rename the file to .env
+
+ To initiate the dialogue pipeline, first ensure your `uv` virtual environment is active (`source .venv/bin/activate` or similar). Then, execute the following command in your terminal:
+
+ ```bash
+ uv run python main.py
+ ```
 
 ## Project Structure
 The project is organized as follows:
 
 - **`main.py`**: The main entry point for the application, responsible for managing user profiles and executing the cultural analysis.
-- **`nodes.py`**: Contains definitions for cultural experts and the logic for generating their responses.
 
-- **`inputData.py`**: Handles the sampling of user profiles and questions.
-- **`graph.py`**: Defines the cultural graph used for analyzing cultural sensitivities.
+- **`.env.example`**: This is an example file of how `.env` should look like, to run this project you need to obtain corresponding value separately and create a `.env` file following the format of `.env.example`
+
+- **`requirements.txt`**: python libraries for the project
+
+### Folders
+
+- **`corpora`**: During development phase, the following files should be included in the folder
+
+    - `persona_data_list.json`: Samples of persona data
+    - `wvs_questions.json`: World Value Survey questions
+
+- **`llmagentsetting`**: Include the LLM clients and configuration
+
+- **`mylanggraph`**: Graph of Cultural Alignment System defined in LangGraph, and data structure's schema
+
+- **`node`**: Detail implementation of the nodes in the pipeline
+
+- **`utility`**: Utility function to process input data.
 
 
 ## Contributing
