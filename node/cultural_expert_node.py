@@ -2,27 +2,27 @@ from abc import ABC
 from typing import Dict
 from google import genai
 import unittest
+from llmagentsetting import llm_clients
 
-
+client = llm_clients.GeminiClient()
 # === LLM Model Wrapper ===
-class LLMModel:
-    def __init__(self):
-        self.api_key = "AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"  # Your API Key
-        self.model_name = "gemini-2.0-flash"
-        self.client = genai.Client(api_key=self.api_key)
+# class LLMModel:
+#     def __init__(self):
+#         self.api_key = "AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"  # Your API Key
+#         self.model_name = "gemini-2.0-flash"
+#         self.client = genai.Client(api_key=self.api_key)
 
-    def generate(self, prompt: str) -> str:
-        response = self.client.models.generate_content(
-            model=self.model_name, contents=prompt
-        )
-        return response.text.strip()
+#     def generate(self, prompt: str) -> str:
+#         response = self.client.models.generate_content(
+#             model=self.model_name, contents=prompt
+#         )
+#         return response.text.strip()
 
 
 # === Cultural Expert Base Class ===
 class CulturalExpert(ABC):
-    def __init__(self, culture_name: str, model: LLMModel, country_name: str):
+    def __init__(self, culture_name: str, country_name: str):
         self.culture_name = culture_name
-        self.model = model
         self.country_name = country_name
 
     def enhance_prompt(self, question: str) -> str:
@@ -37,18 +37,18 @@ class CulturalExpert(ABC):
 
     def generate_response(self, question: str) -> str:
         prompt = self.enhance_prompt(question)
-        return self.model.generate(prompt)
+        return client.generate(prompt)
 
     def __call__(self, state: Dict) -> str:
         question = state["question_meta"]["original"]
-        response_text = self.generate_response(question)
+        response_text = client.generate(question)
         return response_text
 
 
 # === Manager Class for Experts ===
 class CulturalExpertManager:
-    def __init__(self, model: LLMModel):
-        self.model = model
+    def __init__(self):
+    
         self.expert_instances = {}
 
     def generate_expert_instances(self):
@@ -56,7 +56,6 @@ class CulturalExpertManager:
         for country in countries:
             self.expert_instances[country] = CulturalExpert(
                 culture_name=f"{country} Culture",
-                model=self.model,
                 country_name=country,
             )
         return self.expert_instances
@@ -78,10 +77,9 @@ class CulturalExpertManager:
 # === Example Usage ===
 if __name__ == "__main__":
     # Initialize model
-    llm_model = LLMModel()
 
     # Initialize manager
-    manager = CulturalExpertManager(llm_model)
+    manager = CulturalExpertManager()
 
     # Generate experts
     expert_instances = manager.generate_expert_instances()
@@ -99,8 +97,7 @@ if __name__ == "__main__":
 # === Unit Test Cases ===
 class TestCulturalExpertManager(unittest.TestCase):
     def setUp(self):
-        self.model = LLMModel()
-        self.manager = CulturalExpertManager(self.model)
+        self.manager = CulturalExpertManager()
         self.manager.generate_expert_instances()
 
     def test_expert_instance_count(self):
