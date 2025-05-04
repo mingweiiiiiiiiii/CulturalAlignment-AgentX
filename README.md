@@ -44,6 +44,15 @@ To set up the project, ensure you have the following packages installed:
     ```
 
  ## Running the Project
+
+### Prerequisite
+
+- **ollama**: Currently this project use ollama to host embedding model, please make sure ollama is installed correctly, and pull `mxbai-embed-large` to be served.
+
+- **`GEMINI API KEY`**: Gemini API key can be generated in [aistudio](https://aistudio.google.com/) after signing up for the service. The API key should be placed in .env (Please refer to .env.example, you can copy the file and put in API key accordingly and rename the file to .env)
+
+- **`GROQ API KEY`**: Groq API key can be generated in [groq](https://groq.com/) after signing up for the service.(Please refer to .env.example, you can copy the file and put in API key accordingly and rename the file to .env
+
  To initiate the dialogue pipeline, first ensure your `uv` virtual environment is active (`source .venv/bin/activate` or similar). Then, execute the following command in your terminal:
 
  ```bash
@@ -54,6 +63,10 @@ To set up the project, ensure you have the following packages installed:
 The project is organized as follows:
 
 - **`main.py`**: The main entry point for the application, responsible for managing user profiles and executing the cultural analysis.
+
+- **`.env.example`**: This is an example file of how `.env` should look like, to run this project you need to obtain corresponding value separately and create a `.env` file following the format of `.env.example`
+
+- **`requirements.txt`**: python libraries for the project
 
 ### Folders
 
