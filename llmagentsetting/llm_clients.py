@@ -6,14 +6,14 @@ from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 import os
 import requests
-from llmagentsetting.api_key import germini_api_key, groq_api_key, lamda_api_key
+
 
 class GeminiClient:
     def __init__(
         self, model_name: str = "gemini-2.0-flash", api_key: Optional[str] = None
     ):
         load_dotenv(".env", override=True)
-        self.api_key = api_key or os.getenv("GOOGLE_STUDIO_API") or germini_api_key
+        self.api_key = api_key or os.getenv("GOOGLE_STUDIO_API") 
         if not self.api_key:
             raise ValueError(
                 "Google Studio API key must be provided or set in environment variables."
@@ -42,7 +42,7 @@ class GroqClient:
         temperature: float = 0.7,
     ):
         load_dotenv()
-        self.api_key = api_key or os.getenv("GROQ_API_KEY") or groq_api_key
+        self.api_key = api_key or os.getenv("GROQ_API_KEY") 
         if not self.api_key:
             raise ValueError(
                 "Groq API key must be provided or set in environment variables."
