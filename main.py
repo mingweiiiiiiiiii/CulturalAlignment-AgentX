@@ -13,30 +13,52 @@ from utility.inputData import PersonaSampler
 from utility.baseline import generate_baseline_essay
 
 
+
+
 def shannon_entropy(labels):
+    """
+    Shannon entropy to measure diversity (e.g., of cultural responses).
+    """
     total = len(labels)
     counts = Counter(labels)
     return -sum((count / total) * math.log2(count / total) for count in counts.values() if count > 0)
 
 
-def evaluate_response_from_model(state: GraphState) -> dict:
-    responses = state.get("response_state", {}).get("expert_responses", [])
-    lengths = [len(r.get("content", "")) for r in responses]
-    cultures = [r.get("culture", "") for r in responses if r.get("culture")]
+def evaluate_response(graph_state: GraphState) -> dict:
+    """
+    Computes a rich set of evaluation metrics based on graph output.
+    Metrics include response quality, alignment, diversity, and topic sensitivity.
+    """
+    expert_responses = graph_state.get("response_state", {}).get("expert_responses", [])
+    relevant_cultures = graph_state.get("question_meta", {}).get("relevant_cultures", [])
+    sensitive_topics = graph_state.get("question_meta", {}).get("sensitive_topics", [])
+
+    # Metrics base
+    response_lengths = [len(r.get("content", "")) for r in expert_responses]
+    response_cultures = [r.get("culture", "") for r in expert_responses if r.get("culture")]
+
+    aligned = [c for c in response_cultures if c in relevant_cultures]
+    alignment_distribution = Counter(response_cultures)
+    cultural_alignment_variance = float(np.var([alignment_distribution[c] for c in relevant_cultures])) if relevant_cultures else 0.0
+
+    sensitive_hits = sum(
+        any(t.lower() in r.get("content", "").lower() for t in sensitive_topics)
+        for r in expert_responses
+    )
 
     return {
-        "num_expert_responses": len(responses),
-        "avg_response_length": np.mean(lengths) if lengths else 0,
-        "std_response_length": np.std(lengths) if lengths else 0,
+        "num_expert_responses": len(expert_responses),
+        "avg_response_length": sum(response_lengths) / max(1, len(response_lengths)),
+        "std_response_length": float(np.std(response_lengths)) if response_lengths else 0.0,
         "response_completeness": sum(
-            1 for r in responses if all(x in r.get("content", "").lower() for x in ['a', 'b', 'c', 'd'])
-        ) / max(1, len(responses)),
-        "cultural_alignment_score": 0.0,  # No relevant_cultures provided
-        "cultural_alignment_variance": 0.0,
-        "unique_cultures": len(set(cultures)),
-        "diversity_entropy": shannon_entropy(cultures) if cultures else 0.0,
-        "sensitivity_coverage": 0.0,
-        "sensitive_topic_mention_rate": 0.0,
+            1 for r in expert_responses if all(opt.lower() in r.get("content", "").lower() for opt in ['a', 'b', 'c', 'd'])
+        ) / max(1, len(expert_responses)),
+        "cultural_alignment_score": len(aligned) / max(1, len(response_cultures)),
+        "cultural_alignment_variance": cultural_alignment_variance,
+        "unique_cultures": len(set(response_cultures)),
+        "diversity_entropy": shannon_entropy(response_cultures) if response_cultures else 0.0,
+        "sensitivity_coverage": sensitive_hits / max(1, len(sensitive_topics)) if sensitive_topics else 0,
+        "sensitive_topic_mention_rate": sensitive_hits / max(1, len(expert_responses)),
     }
 
 
