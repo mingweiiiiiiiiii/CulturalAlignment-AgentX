@@ -6,7 +6,7 @@ import seaborn as sns
 from collections import Counter
 import sys
 sys.path.append('.')  # Adjust as needed
-
+import json
 from mylanggraph.graph import create_cultural_graph
 from mylanggraph.types import GraphState
 from utility.inputData import PersonaSampler
@@ -63,20 +63,68 @@ def evaluate_response(graph_state: GraphState) -> dict:
         "sensitive_topic_mention_rate": sensitive_hits / max(1, len(expert_responses)),
     }
 
-
+# LLM-AS-JUDGE
 def evaluate_baseline_response(essay: str) -> dict:
+    """
+    Evaluates a baseline essay using deterministic metrics and LLM-as-a-judge
+    for cultural alignment, diversity, and sensitivity metrics.
+    """
+    # Step 1: Deterministic metrics
     length = len(essay)
+    completeness = 1.0 if all(opt in essay.lower() for opt in ['a', 'b', 'c', 'd']) else 0.0
+
+    # Step 2: Construct LLM judging prompt
+    prompt = f"""
+You are an expert evaluator assessing a single essay for cultural richness and sensitivity coverage.
+Your task is to assign **numeric scores** for the following six metrics, based solely on the essay content.
+
+Please return a **strict JSON object** with these fields and formats (no explanation, no extra text):
+
+{{
+  "cultural_alignment_score": float between 0.0 and 1.0,
+  "cultural_alignment_variance": float ≥ 0.0,
+  "unique_cultures": integer ≥ 0,
+  "diversity_entropy": float ≥ 0.0,
+  "sensitivity_coverage": float between 0.0 and 1.0,
+  "sensitive_topic_mention_rate": float between 0.0 and 1.0
+}}
+
+### Metric Guidance:
+- **cultural_alignment_score**: How well the essay reflects recognizable cultural perspectives (e.g., values, customs, norms). 1.0 = highly culturally grounded; 0.0 = culturally generic or monocultural.
+- **cultural_alignment_variance**: Variation in emphasis across multiple cultures. High variance = one culture dominates; low variance = more balanced.
+- **unique_cultures**: Number of clearly distinct cultural perspectives or references included (e.g., references to Japanese collectivism, Western individualism, Islamic ethics).
+- **diversity_entropy**: Shannon entropy of cultural variety — more balance and uniqueness → higher score.
+- **sensitivity_coverage**: Whether the essay explicitly addresses socially sensitive issues (e.g., gender, inequality, religion, race). Higher = better coverage.
+- **sensitive_topic_mention_rate**: How frequently these sensitive topics are mentioned. Do not penalize shortness; this is a ratio of mentions to expected topics.
+
+### Essay to evaluate:
+\"\"\"{essay}\"\"\"
+
+Output only the JSON object with the six keys. No prose.
+"""
+
+    # Step 3: Get LLM-generated metric scores
+    try:
+        generate_response = judgeModel.generate(prompt)
+        judged_metrics = json.loads(generate_response) if isinstance(generate_response, str) else generate_response
+    except Exception as e:
+        print(f"LLM response parsing failed: {e}")
+        judged_metrics = {
+            "cultural_alignment_score": 0.0,
+            "cultural_alignment_variance": 0.0,
+            "unique_cultures": 0,
+            "diversity_entropy": 0.0,
+            "sensitivity_coverage": 0.0,
+            "sensitive_topic_mention_rate": 0.0,
+        }
+
+    # Step 4: Merge and return full evaluation
     return {
         "num_expert_responses": 1,
         "avg_response_length": length,
         "std_response_length": 0.0,
-        "response_completeness": int(all(opt in essay.lower() for opt in ['a', 'b', 'c', 'd'])),
-        "cultural_alignment_score": 0.0,
-        "cultural_alignment_variance": 0.0,
-        "unique_cultures": 0,
-        "diversity_entropy": 0.0,
-        "sensitivity_coverage": 0.0,
-        "sensitive_topic_mention_rate": 0.0,
+        "response_completeness": completeness,
+        **judged_metrics
     }
 
 
