@@ -12,7 +12,9 @@ from mylanggraph.types import GraphState
 from utility.inputData import PersonaSampler
 from utility.baseline import generate_baseline_essay
 
+from llmagentsetting import llm_clients
 
+judgeModel = llm_clients.GeminiClient()
 
 
 def shannon_entropy(labels):
