@@ -13,8 +13,12 @@ from utility.inputData import PersonaSampler
 from utility.baseline import generate_baseline_essay
 
 from llmagentsetting import llm_clients
-
-judgeModel = llm_clients.GeminiClient()
+use_gemini = False
+if use_gemini:
+    judgeModel = llm_clients.GeminiClient()
+else:
+    print("❗Falling back to Lambda API client")
+    judgeModel = llm_clients.LambdaAPIClient()
 
 
 def shannon_entropy(labels):
@@ -34,17 +38,21 @@ def evaluate_response(graph_state: GraphState) -> dict:
     expert_responses = graph_state.get("response_state", {}).get("expert_responses", [])
     relevant_cultures = graph_state.get("question_meta", {}).get("relevant_cultures", [])
     sensitive_topics = graph_state.get("question_meta", {}).get("sensitive_topics", [])
-
+    print(f"Evaluating {len(expert_responses)} expert responses...")
+    print(f"Relevant cultures: {relevant_cultures}")
+    print(f"Sensitive topics: {sensitive_topics}")
+    
     # Metrics base
-    response_lengths = [len(r.get("content", "")) for r in expert_responses]
+    response_lengths = [len(r.get("response", "")) for r in expert_responses]
     response_cultures = [r.get("culture", "") for r in expert_responses if r.get("culture")]
-
+    print(f"Response cultures: {response_cultures} len: {len(response_cultures)}")
     aligned = [c for c in response_cultures if c in relevant_cultures]
     alignment_distribution = Counter(response_cultures)
+    print(f"Alignment distribution: {alignment_distribution}")
     cultural_alignment_variance = float(np.var([alignment_distribution[c] for c in relevant_cultures])) if relevant_cultures else 0.0
 
     sensitive_hits = sum(
-        any(t.lower() in r.get("content", "").lower() for t in sensitive_topics)
+        any(t.lower() in r.get("response", "").lower() for t in sensitive_topics)
         for r in expert_responses
     )
 
@@ -53,7 +61,7 @@ def evaluate_response(graph_state: GraphState) -> dict:
         "avg_response_length": sum(response_lengths) / max(1, len(response_lengths)),
         "std_response_length": float(np.std(response_lengths)) if response_lengths else 0.0,
         "response_completeness": sum(
-            1 for r in expert_responses if all(opt.lower() in r.get("content", "").lower() for opt in ['a', 'b', 'c', 'd'])
+            1 for r in expert_responses if all(opt.lower() in r.get("response", "").lower() for opt in ['a', 'b', 'c', 'd'])
         ) / max(1, len(expert_responses)),
         "cultural_alignment_score": len(aligned) / max(1, len(response_cultures)),
         "cultural_alignment_variance": cultural_alignment_variance,
@@ -105,7 +113,18 @@ Output only the JSON object with the six keys. No prose.
 
     # Step 3: Get LLM-generated metric scores
     try:
-        generate_response = judgeModel.generate(prompt)
+        if use_gemini:
+            generate_response = judgeModel.generate(prompt)
+        elif isinstance(judgeModel, llm_clients.LambdaAPIClient):
+            generate_response = judgeModel.get_completion(
+            prompt,
+            temperature=0,
+            max_tokens=200
+        )
+            print("RAW LLM OUTPUT ▶", repr(generate_response))
+        else:
+            raise RuntimeError("LLM client does not have a supported generate method")
+        
         judged_metrics = json.loads(generate_response) if isinstance(generate_response, str) else generate_response
     except Exception as e:
         print(f"LLM response parsing failed: {e}")
@@ -159,16 +178,17 @@ def compare_with_baseline(n=10):
             "activate_compose": False,
             "current_state": "planner",
         }
-    
+        print(f"\n\n--- Model {i} ---")
+        print("Invoking graph with state:", state)
         result = graph.invoke(state, config={
             "recursion_limit": 200,
             "configurable": {"thread_id": str(i)},
             "verbose": True,
-        })      
-        model_metrics = evaluate_response_from_model(result)
+        })     
+        model_metrics = evaluate_response(result)
         model_metrics.update({"type": "model", "id": i})
         model_records.append(model_metrics)
-
+        print("Model metrics:", model_metrics)
         # --- Baseline ---
         essay = generate_baseline_essay(profiles, merged_question)
         baseline_metrics = evaluate_baseline_response(essay)
@@ -202,6 +222,6 @@ def save_markdown_table(df: pd.DataFrame, path: str = "./comparison_table.md"):
 
 
 if __name__ == "__main__":
-    df_results = compare_with_baseline(n=5)
+    df_results = compare_with_baseline(n=10)  # Adjust n as needed
     path = save_markdown_table(df_results)
     print(f"\n✅ Markdown saved to: {path}")

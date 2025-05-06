@@ -3,7 +3,7 @@ from google import genai
 from typing import Dict
 from llmagentsetting import llm_clients
 
-client = llm_clients.GeminiClient()
+client = llm_clients.LambdaAPIClient()
 
 def extract_sensitive_topics(state) -> Dict:
     question = state["question_meta"]["original"]
@@ -37,7 +37,7 @@ def extract_sensitive_topics(state) -> Dict:
     {question}
     ```     
     """
-    topics = client.generate(prompt)
+    topics = client.get_completion(prompt)
     return {
         "question_meta": {**state["question_meta"], "sensitive_topics": topics},
         "db_action": "write",
