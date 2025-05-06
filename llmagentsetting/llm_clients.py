@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, Any, List, Dict
 from mistralai import Mistral
 from google import genai
 from langchain_groq import ChatGroq
@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import os
 import requests
 
+from .api_key import lambda_api_key
 
 class GeminiClient:
     def __init__(
@@ -97,7 +98,7 @@ class MistralClient:
         return chat_response.choices[0].message.content.strip()
 
 
-class LamdaAPIClient:
+class LambdaAPIClient:
     MODEL_LIST = [
         "deepseek-llama3.3-70b",
         "deepseek-r1-671b",
@@ -122,7 +123,7 @@ class LamdaAPIClient:
 
     def __init__(self, api_key=None, germini_api_key=None):
         load_dotenv(".env", override=True)
-        self.api_key = api_key or os.getenv("LAMBDA_API") or lamda_api_key
+        self.api_key = api_key or os.getenv("LAMBDA_API") or lambda_api_key
 
         if not self.api_key:
             raise ValueError(
@@ -137,18 +138,31 @@ class LamdaAPIClient:
             "Content-Type": "application/json"
         }
 
-    def get_completion(self, prompt, model=None) -> str:
+    def get_completion(
+        self,
+        prompt: str,
+        model: str = None,
+        temperature: float = 0.0,
+        max_tokens: int = 256,
+        stop: list[str] = None,
+    ) -> str:
         model = model or self.DEFAULT_MODEL
         if model not in self.MODEL_LIST:
             raise ValueError(f"Invalid model name. Choose from:\n{', '.join(self.MODEL_LIST)}")
         
-        data = {
+        data: dict[str, Any] = {
             "model": model,
             "prompt": prompt,
-            "temperature": 0
+            "temperature": temperature,
+            "max_tokens": max_tokens,
         }
-
+        if stop is not None:
+            data["stop"] = stop
+        if not isinstance(prompt, str):
+            raise ValueError("Prompt must be a string.")
+        
         response = requests.post(self.url, headers=self.headers, json=data)
+        #print("Lambda API response:", response.status_code, response.text)
         response_data = response.json()
 
         try:
@@ -160,7 +174,7 @@ def test_lambdamain():
     prompt = input("Enter your prompt: ").strip()
 
     try:
-        client = LamdaAPIClient()
+        client = LambdaAPIClient()
         result = client.get_completion(prompt=prompt)
         print("Generated Text:", result)
     except ValueError as e:
