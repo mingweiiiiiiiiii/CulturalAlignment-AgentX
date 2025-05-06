@@ -4,7 +4,7 @@ from google import genai
 import unittest
 from llmagentsetting import llm_clients
 
-client = llm_clients.GeminiClient()
+client = llm_clients.LambdaAPIClient()
 # === LLM Model Wrapper ===
 # class LLMModel:
 #     def __init__(self):
@@ -37,11 +37,11 @@ class CulturalExpert(ABC):
 
     def generate_response(self, question: str) -> str:
         prompt = self.enhance_prompt(question)
-        return client.generate(prompt)
+        return client.get_completion(prompt)
 
     def __call__(self, state: Dict) -> str:
         question = state["question_meta"]["original"]
-        response_text = client.generate(question)
+        response_text = client.get_completion(question)
         return response_text
 
 

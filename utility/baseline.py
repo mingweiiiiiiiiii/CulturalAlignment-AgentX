@@ -1,6 +1,7 @@
 from llmagentsetting import llm_clients
 
-client = llm_clients.GeminiClient()
+client = llm_clients.LambdaAPIClient()
+
 
 def generate_baseline_essay(profiles: list, merged_question: str) -> str:
     """
@@ -26,5 +27,6 @@ Your essay should be well-structured and objective. Do not mention specific cult
 
 [Essay]
 """
-    response = client.generate(prompt)
+    
+    response = client.get_completion(prompt)
     return response
