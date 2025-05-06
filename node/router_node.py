@@ -113,9 +113,10 @@ def route_to_cultures(
         selected_experts.append(
             {"culture": culture, "weight": float(weight), "prompt": prompt_text}
         )
-
+    state["question_meta"]["relevant_cultures"] = [e["culture"] for e in selected_experts]
+    
     return {
-    "activate_set": selected_experts  # or whatever key your next node expects
+    "activate_set": selected_experts
     }
 
 

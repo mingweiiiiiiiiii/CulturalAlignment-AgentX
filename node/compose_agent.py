@@ -3,7 +3,7 @@ import google.generativeai as genai
 from llmagentsetting import llm_clients
 
 
-client = llm_clients.GeminiClient()
+client = llm_clients.LambdaAPIClient()
 # Define ExpertResponse type
 ExpertResponse = Dict[str, str]
 #  Compose Final Response
@@ -64,11 +64,11 @@ def compose_final_response(state: Dict[str, Any]) -> Dict[str, Any]:
     # genai.configure(api_key=GoogleStudio_API_KEY)
 
     try:
-        response = client.generate(prompt_parts)
+        response = client.get_completion(llm_prompt)
         final_response = response
     except Exception as e:
         final_response = f"[LLM Error: {str(e)}]"
-
+    
     # Step 4: Optional soft enforcement (post-process if needed)
     words = final_response.split()
     if len(words) > 200:
