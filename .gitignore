@@ -52,3 +52,6 @@ htmlcov/
 
 # persona_data_list.json
 persona_data_list.json
+
+# data/graph_checkpoints
+data/graph_checkpoints/*
