@@ -3,6 +3,31 @@
 ## Overview
 The Cultural Alignment Project is designed to facilitate a culturally-aware multi-agent dialogue pipeline utilizing LangGraph. The primary objective is to analyze cultural sensitivities and generate responses that reflect diverse cultural perspectives.
 
+## Purpose and Significance
+
+In an increasingly interconnected world, effective cross-cultural communication is paramount. However, digital interactions, especially those mediated by AI, often lack the nuanced understanding of diverse cultural contexts. This can lead to misinterpretations, alienation, and ineffective communication.
+
+The Cultural Alignment Project aims to address this gap by:
+
+-   **Enhancing AI's Cultural Intelligence:** Developing AI systems that can perceive, understand, and adapt to various cultural norms and sensitivities.
+-   **Fostering Inclusive Dialogue:** Enabling AI-driven conversations that are respectful and considerate of diverse cultural backgrounds.
+-   **Improving User Experience:** Providing more natural and effective interactions for users from different cultural upbringings.
+-   **Advancing Research:** Contributing to the field of culturally-aware AI by exploring novel methods for integrating cultural knowledge into language models and agentic systems.
+-   **Potential Applications:** This research can pave the way for applications in global customer service, international diplomacy, multicultural education, and content generation for diverse audiences.
+
+## Methodology
+
+The project employs a multi-agent dialogue pipeline built with LangGraph. This framework allows for a structured yet flexible interaction between specialized agents, each contributing to the cultural alignment process.
+
+### Cultural Knowledge Integration
+
+-   **World Value Survey (WVS):** Utilizes [WVS questions](https://www.worldvaluessurvey.org/wvs.jsp) to model and understand different cultural dimensions and values. This data helps in grounding the AI's understanding of cultural perspectives.
+-   **Persona Data:** Incorporates diverse persona profiles in [SynthLabAI's dataset](https://huggingface.co/datasets/SynthLabsAI/PERSONA) representing individuals with varied cultural backgrounds and characteristics. These personas help simulate and test the system's ability to adapt to different cultural contexts.
+
+### Key Technical Components & Process
+1.  **Input & Cultural Contextualization:** User input is received. The system analyzes this input for cultural cues, potentially leveraging embeddings of cultural data (like WVS insights) and persona information.
+2.  **Embedding Models:** The project uses embedding models (e.g., `mxbai-embed-large` served via Ollama) to convert textual data into dense vector representations. This enables semantic similarity searches and nuanced understanding of cultural nuances. The `pymilvus` dependency suggests these embeddings may be stored and queried efficiently using a vector database like Milvus.
+
 ## Installation
 
 To set up the project, ensure you have the following packages installed:
