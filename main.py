@@ -1,18 +1,25 @@
-import math
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from collections import Counter
-import sys
-sys.path.append('.')  # Adjust as needed
 import json
-from mylanggraph.graph import create_cultural_graph
-from mylanggraph.types import GraphState
-from utility.inputData import PersonaSampler
-from utility.baseline import generate_baseline_essay
+import math
+import sys
+from collections import Counter
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from datetime import datetime
+import os
+import argparse
 
 from llmagentsetting import llm_clients
+from mylanggraph.graph import create_cultural_graph
+from mylanggraph.types import GraphState
+from utility.baseline import generate_baseline_essay
+from utility.inputData import PersonaSampler
+
+sys.path.append('.')  # Adjust as needed
+
+
 use_gemini = False
 if use_gemini:
     judgeModel = llm_clients.GeminiClient()
@@ -35,24 +42,31 @@ def evaluate_response(graph_state: GraphState) -> dict:
     Computes a rich set of evaluation metrics based on graph output.
     Metrics include response quality, alignment, diversity, and topic sensitivity.
     """
-    expert_responses = graph_state.get("response_state", {}).get("expert_responses", [])
-    relevant_cultures = graph_state.get("question_meta", {}).get("relevant_cultures", [])
-    sensitive_topics = graph_state.get("question_meta", {}).get("sensitive_topics", [])
+    expert_responses = graph_state.get(
+        "response_state", {}).get("expert_responses", [])
+    relevant_cultures = graph_state.get(
+        "question_meta", {}).get("relevant_cultures", [])
+    sensitive_topics = graph_state.get(
+        "question_meta", {}).get("sensitive_topics", [])
     print(f"Evaluating {len(expert_responses)} expert responses...")
     print(f"Relevant cultures: {relevant_cultures}")
     print(f"Sensitive topics: {sensitive_topics}")
-    
+
     # Metrics base
     response_lengths = [len(r.get("response", "")) for r in expert_responses]
-    response_cultures = [r.get("culture", "") for r in expert_responses if r.get("culture")]
-    print(f"Response cultures: {response_cultures} len: {len(response_cultures)}")
+    response_cultures = [r.get("culture", "")
+                         for r in expert_responses if r.get("culture")]
+    print(
+        f"Response cultures: {response_cultures} len: {len(response_cultures)}")
     aligned = [c for c in response_cultures if c in relevant_cultures]
     alignment_distribution = Counter(response_cultures)
     print(f"Alignment distribution: {alignment_distribution}")
-    cultural_alignment_variance = float(np.var([alignment_distribution[c] for c in relevant_cultures])) if relevant_cultures else 0.0
+    cultural_alignment_variance = float(np.var(
+        [alignment_distribution[c] for c in relevant_cultures])) if relevant_cultures else 0.0
 
     sensitive_hits = sum(
-        any(t.lower() in r.get("response", "").lower() for t in sensitive_topics)
+        any(t.lower() in r.get("response", "").lower()
+            for t in sensitive_topics)
         for r in expert_responses
     )
 
@@ -72,6 +86,8 @@ def evaluate_response(graph_state: GraphState) -> dict:
     }
 
 # LLM-AS-JUDGE
+
+
 def evaluate_baseline_response(essay: str) -> dict:
     """
     Evaluates a baseline essay using deterministic metrics and LLM-as-a-judge
@@ -79,7 +95,8 @@ def evaluate_baseline_response(essay: str) -> dict:
     """
     # Step 1: Deterministic metrics
     length = len(essay)
-    completeness = 1.0 if all(opt in essay.lower() for opt in ['a', 'b', 'c', 'd']) else 0.0
+    completeness = 1.0 if all(opt in essay.lower()
+                              for opt in ['a', 'b', 'c', 'd']) else 0.0
 
     # Step 2: Construct LLM judging prompt
     prompt = f"""
@@ -117,15 +134,17 @@ Output only the JSON object with the six keys. No prose.
             generate_response = judgeModel.generate(prompt)
         elif isinstance(judgeModel, llm_clients.LambdaAPIClient):
             generate_response = judgeModel.get_completion(
-            prompt,
-            temperature=0,
-            max_tokens=200
-        )
+                prompt,
+                temperature=0,
+                max_tokens=200
+            )
             print("RAW LLM OUTPUT ▶", repr(generate_response))
         else:
-            raise RuntimeError("LLM client does not have a supported generate method")
-        
-        judged_metrics = json.loads(generate_response) if isinstance(generate_response, str) else generate_response
+            raise RuntimeError(
+                "LLM client does not have a supported generate method")
+
+        judged_metrics = json.loads(generate_response) if isinstance(
+            generate_response, str) else generate_response
     except Exception as e:
         print(f"LLM response parsing failed: {e}")
         judged_metrics = {
@@ -155,7 +174,11 @@ def compare_with_baseline(n=10):
     for i in range(n):
         profiles = sampler.sample_profiles(n=1)
         question, options = sampler.sample_question()
-        merged_question = f"{question}\n\nOptions:\n" + "\n".join([f"{chr(65 + j)}. {opt}" for j, opt in enumerate(options)])
+        merged_question = f"{question}\n\nOptions:\n" + \
+            "\n".join([f"{chr(65 + j)}. {opt}" for j,
+                      opt in enumerate(options)])
+        
+        print(f"Merged question: {merged_question}")
 
         # --- Model system ---
         state: GraphState = {
@@ -180,11 +203,13 @@ def compare_with_baseline(n=10):
         }
         print(f"\n\n--- Model {i} ---")
         print("Invoking graph with state:", state)
+
+        print(f"State:", state["user_profile"])
         result = graph.invoke(state, config={
             "recursion_limit": 200,
             "configurable": {"thread_id": str(i)},
             "verbose": True,
-        })     
+        })
         model_metrics = evaluate_response(result)
         model_metrics.update({"type": "model", "id": i})
         model_records.append(model_metrics)
@@ -211,17 +236,62 @@ def generate_comparison_table_markdown(df: pd.DataFrame) -> str:
     return table
 
 
-def save_markdown_table(df: pd.DataFrame, path: str = "./comparison_table.md"):
+def save_markdown_table(df: pd.DataFrame) -> str:
     markdown = generate_comparison_table_markdown(df)
-    with open(path, "w") as f:
+    with open("./comparison_table.md", "w") as f:
         f.write("# Baseline vs Model Comparison Table\n\n")
         f.write(markdown)
+    return "./comparison_table.md"
+
+
+def save_results_to_csv(df: pd.DataFrame, path: str = None):
+    """
+    Saves the full evaluation results dataframe to a CSV file with timestamp.
+
+    Args:
+        df: DataFrame containing evaluation metrics
+        path: Optional custom path where the CSV file will be saved
+
+    Returns:
+        Path to the saved CSV file
+    """
+
+    # Get current timestamp for unique filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Create results directory if it doesn't exist
+    results_dir = "./results"
+    os.makedirs(results_dir, exist_ok=True)
+
+    # Create filename with timestamp
+    if path is None:
+        filename = f"eval_results_{timestamp}.csv"
+        path = os.path.join(results_dir, filename)
+
+    # Add metadata columns to the dataframe
+    df['timestamp'] = timestamp
+
+    # Save to CSV
+    df.to_csv(path, index=False)
+    print(f"✅ Results saved to: {path}")
+
     return path
 
 
-
-
 if __name__ == "__main__":
-    df_results = compare_with_baseline(n=10)  # Adjust n as needed
-    path = save_markdown_table(df_results)
-    print(f"\n✅ Markdown saved to: {path}")
+    # Get optional number of runs from command line arguments
+    parser = argparse.ArgumentParser(description='Run evaluation comparison')
+    parser.add_argument('--n', type=int, default=10,
+                        help='Number of comparisons to run')
+    args = parser.parse_args()
+
+    print(f"Running {args.n} comparisons...")
+    df_results = compare_with_baseline(n=args.n)
+
+    # Save markdown table
+    md_path = save_markdown_table(df_results)
+    print(f"\n✅ Markdown saved to: {md_path}")
+
+    # Save detailed results to CSV
+    csv_path = save_results_to_csv(df_results)
+    print(f"✅ Detailed results saved to: {csv_path}")
