@@ -25,8 +25,12 @@ The project employs a multi-agent dialogue pipeline built with LangGraph. This f
 -   **Persona Data:** Incorporates diverse persona profiles in [SynthLabAI's dataset](https://huggingface.co/datasets/SynthLabsAI/PERSONA) representing individuals with varied cultural backgrounds and characteristics. These personas help simulate and test the system's ability to adapt to different cultural contexts.
 
 ### Key Technical Components & Process
-1.  **Input & Cultural Contextualization:** User input is received. The system analyzes this input for cultural cues, potentially leveraging embeddings of cultural data (like WVS insights) and persona information.
-2.  **Embedding Models:** The project uses embedding models (e.g., `mxbai-embed-large` served via Ollama) to convert textual data into dense vector representations. This enables semantic similarity searches and nuanced understanding of cultural nuances. The `pymilvus` dependency suggests these embeddings may be stored and queried efficiently using a vector database like Milvus.
+1.  **Input & Cultural Contextualization:** User input is received. The system analyzes this input for cultural cues, determine whether the topic is sensitive, if so it will be sent to multiple cultural expert agents, consolidate their inputs prior to composing the final response.
+
+![graph](img/graph.png)
+
+
+2.  **Embedding Models:** The project uses embedding models (e.g., `mxbai-embed-large` served via Ollama) to convert textual data into dense vector representations. This enables semantic similarity searches and nuanced understanding of cultural sensitivity.
 
 ## Installation
 
