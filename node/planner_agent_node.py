@@ -6,9 +6,7 @@ planner_counter = 0
 def planner_agent(state) -> Dict:
     """Planner that routes based on current state and graph iteration."""
 
-    global planner_counter
-    planner_counter += 1
-    counter = planner_counter
+    counter = state["planner_counter"] + 1 if "planner_counter" in state else 1
     
     if counter == 1:
         return {
@@ -24,7 +22,7 @@ def planner_agent(state) -> Dict:
             "__next__": "extract_topics",
             "current_state": "extract_topics"
         }
-    elif counter == 2 and state.get("is_sensitive") is False:
+    elif counter == 2 and not state.get("is_sensitive", False):
         return {
             "planner_counter": counter,
             "__next__": "compose",
