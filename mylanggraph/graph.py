@@ -38,7 +38,7 @@ def create_cultural_graph(cultures: Optional[List[str]] = None):
     builder.add_conditional_edges(
         "planner",
         lambda state: [state["__next__"]] if "__next__" in state else [],
-        ["sensitivity_check", "router", "compose"],
+        ["sensitivity_check", "extract_topics", "router", "compose"],
     )
     builder.add_edge("sensitivity_check", "extract_topics")
     builder.add_edge("extract_topics", "router")
