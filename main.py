@@ -36,8 +36,13 @@ def evaluate_response(graph_state: GraphState) -> dict:
     Metrics include response quality, alignment, diversity, and topic sensitivity.
     """
     expert_responses = graph_state.get("response_state", {}).get("expert_responses", [])
+    final_response = graph_state.get("response_state", {}).get("final", "")
     relevant_cultures = graph_state.get("question_meta", {}).get("relevant_cultures", [])
     sensitive_topics = graph_state.get("question_meta", {}).get("sensitive_topics", [])
+    question = graph_state.get("question_meta", {}).get("original", "")
+    # Add these to visualize responses, free feel to comment it out
+    print(f"question: {question}")
+    print(f"Final response: {final_response}")
     print(f"Evaluating {len(expert_responses)} expert responses...")
     print(f"Relevant cultures: {relevant_cultures}")
     print(f"Sensitive topics: {sensitive_topics}")
@@ -152,14 +157,14 @@ def compare_with_baseline(n=10):
     graph = create_cultural_graph()
     model_records, baseline_records = [], []
 
+    profiles = sampler.sample_profiles(n)
     for i in range(n):
-        profiles = sampler.sample_profiles(n=1)
         question, options = sampler.sample_question()
         merged_question = f"{question}\n\nOptions:\n" + "\n".join([f"{chr(65 + j)}. {opt}" for j, opt in enumerate(options)])
 
         # --- Model system ---
         state: GraphState = {
-            "user_profile": profiles[0],
+            "user_profile": profiles[i],
             "question_meta": {
                 "original": merged_question,
                 "options": options,
@@ -179,7 +184,8 @@ def compare_with_baseline(n=10):
             "current_state": "planner",
         }
         print(f"\n\n--- Model {i} ---")
-        print("Invoking graph with state:", state)
+        print("Graph nodes:", graph.get_graph().nodes)
+        print("\nInvoking graph with state:", state)
         result = graph.invoke(state, config={
             "recursion_limit": 200,
             "configurable": {"thread_id": str(i)},
@@ -191,6 +197,7 @@ def compare_with_baseline(n=10):
         print("Model metrics:", model_metrics)
         # --- Baseline ---
         essay = generate_baseline_essay(profiles, merged_question)
+        print(f"Baseline LLM response {i}: {essay}")
         baseline_metrics = evaluate_baseline_response(essay)
         baseline_metrics.update({"type": "baseline", "id": i})
         baseline_records.append(baseline_metrics)
@@ -222,6 +229,6 @@ def save_markdown_table(df: pd.DataFrame, path: str = "./comparison_table.md"):
 
 
 if __name__ == "__main__":
-    df_results = compare_with_baseline(n=10)  # Adjust n as needed
+    df_results = compare_with_baseline(n=3)  # Adjust n as needed
     path = save_markdown_table(df_results)
     print(f"\n✅ Markdown saved to: {path}")

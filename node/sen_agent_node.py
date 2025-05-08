@@ -90,7 +90,7 @@ def determine_cultural_sensitivity(state) -> Dict:
     # Adjust final score
     sensitivity_score = min(
         10, max(0, int(base_score + 2 * (best_sim - 0.5) * 3)))
-
+    is_sensitive = sensitivity_score >= 5
     return {
         "question_meta": {
             **state["question_meta"],
@@ -98,6 +98,9 @@ def determine_cultural_sensitivity(state) -> Dict:
             "sensitivity_score": sensitivity_score,
             "nearest_sensitive_example": best_match,
         },
+        "is_sensitive": is_sensitive,
+        "__next__": "planner",
+        "current_state": "planner"
     }
 
 
