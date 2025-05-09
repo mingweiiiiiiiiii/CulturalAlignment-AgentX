@@ -3,6 +3,7 @@ from typing import Dict
 import numpy as np
 import ollama
 from sklearn.metrics.pairwise import cosine_similarity
+from utility.measure_time import measure_time
 
 # === Reference bank of example questions with sensitivity levels ===
 reference_bank = {
@@ -70,6 +71,7 @@ except Exception as e:
 
 
 # === Determine cultural sensitivity ===
+@measure_time
 def determine_cultural_sensitivity(state) -> Dict:
     question = state["question_meta"]["original"]
     question_embedding = np.array(
@@ -91,17 +93,19 @@ def determine_cultural_sensitivity(state) -> Dict:
     sensitivity_score = min(
         10, max(0, int(base_score + 2 * (best_sim - 0.5) * 3)))
     is_sensitive = sensitivity_score >= 5
-    return {
-        "question_meta": {
-            **state["question_meta"],
-            "is_sensitive": sensitivity_score >= 5,
-            "sensitivity_score": sensitivity_score,
-            "nearest_sensitive_example": best_match,
-        },
-        "is_sensitive": is_sensitive,
-        "__next__": "planner",
-        "current_state": "planner"
-    }
+    state["is_sensitive"] = is_sensitive
+    state["activate_sensitivity_check"] = False  # Reset flag
+    if is_sensitive:
+        state["activate_extract_topics"] = True
+    state["question_meta"].update({
+    "is_sensitive": is_sensitive,
+    "sensitivity_score": sensitivity_score,
+    "nearest_sensitive_example": best_match,
+    })
+
+    state["__next__"] = "planner"
+    state["current_state"] = "planner"
+    return state
 
 
 # === Test ===

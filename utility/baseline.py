@@ -4,9 +4,7 @@ client = llm_clients.LambdaAPIClient()
 
 
 def generate_baseline_essay(profiles: list, merged_question: str) -> str:
-    """
-    Generates a baseline essay using a culturally neutral, standard-format prompt via GeminiClient.
-    """
+    
     user = profiles[0]
 
     prompt = f"""\
