@@ -11,6 +11,7 @@ from mylanggraph.graph import create_cultural_graph
 from mylanggraph.types import GraphState
 from utility.inputData import PersonaSampler
 from utility.baseline import generate_baseline_essay
+import time
 
 from llmagentsetting import llm_clients
 use_gemini = False
@@ -41,12 +42,14 @@ def evaluate_response(graph_state: GraphState) -> dict:
     sensitive_topics = graph_state.get("question_meta", {}).get("sensitive_topics", [])
     question = graph_state.get("question_meta", {}).get("original", "")
     # Add these to visualize responses, free feel to comment it out
-    print(f"question: {question}")
-    print(f"Final response: {final_response}")
-    print(f"Evaluating {len(expert_responses)} expert responses...")
+    #print(f"question: {question}")
+    #print(f"Final response: {final_response}")
+    #print(f"Evaluating {len(expert_responses)} expert responses...")
     print(f"Relevant cultures: {relevant_cultures}")
-    print(f"Sensitive topics: {sensitive_topics}")
-    
+    #print(f"Sensitive topics: {sensitive_topics}")
+    node_times = graph_state.get("node_times", {})
+    print(f"Node times: {node_times}")
+    total_node_latency = sum(node_times.values())
     # Metrics base
     response_lengths = [len(r.get("response", "")) for r in expert_responses]
     response_cultures = [r.get("culture", "") for r in expert_responses if r.get("culture")]
@@ -60,6 +63,10 @@ def evaluate_response(graph_state: GraphState) -> dict:
         any(t.lower() in r.get("response", "").lower() for t in sensitive_topics)
         for r in expert_responses
     )
+    # Metrics for the final response
+    final_response_length = len(final_response)
+    final_sensitive_hits = sum(t.lower() in final_response.lower() for t in sensitive_topics)
+    final_response_completeness = float(all(opt.lower() in final_response.lower() for opt in ['a', 'b', 'c', 'd']))
 
     return {
         "num_expert_responses": len(expert_responses),
@@ -74,6 +81,12 @@ def evaluate_response(graph_state: GraphState) -> dict:
         "diversity_entropy": shannon_entropy(response_cultures) if response_cultures else 0.0,
         "sensitivity_coverage": sensitive_hits / max(1, len(sensitive_topics)) if sensitive_topics else 0,
         "sensitive_topic_mention_rate": sensitive_hits / max(1, len(expert_responses)),
+         # Final composed response
+        "total_node_latency": total_node_latency,
+        "final_response_length": final_response_length,
+        "final_response_completeness": final_response_completeness,
+        "final_sensitivity_coverage": final_sensitive_hits / max(1, len(sensitive_topics)),
+        "final_sensitive_topic_mention_rate": final_sensitive_hits / (1 if final_response else 1),
     }
 
 # LLM-AS-JUDGE
@@ -184,23 +197,34 @@ def compare_with_baseline(n=10):
             "current_state": "planner",
         }
         print(f"\n\n--- Model {i} ---")
-        print("Graph nodes:", graph.get_graph().nodes)
-        print("\nInvoking graph with state:", state)
+        #print("Graph nodes:", graph.get_graph().nodes)
+        #print("\nInvoking graph with state:", state)
+        model_start = time.perf_counter()
         result = graph.invoke(state, config={
             "recursion_limit": 200,
             "configurable": {"thread_id": str(i)},
             "verbose": True,
         })     
+        model_end = time.perf_counter()
+        model_latency = model_end - model_start
+        print("API Calls per Node:")
+        for node, count in result.get("api_calls", {}).items():
+            print(f"  {node}: {count} calls")
+
         model_metrics = evaluate_response(result)
-        model_metrics.update({"type": "model", "id": i})
+        model_metrics.update({"type": "model", "id": i, "latency_seconds": model_latency})
         model_records.append(model_metrics)
-        print("Model metrics:", model_metrics)
+        print(f"Model metrics (Latency: {model_latency:.3f}s):", model_metrics)
         # --- Baseline ---
+        baseline_start = time.perf_counter()
         essay = generate_baseline_essay(profiles, merged_question)
-        print(f"Baseline LLM response {i}: {essay}")
+        #print(f"Baseline LLM response {i}: {essay}")
+        baseline_end = time.perf_counter()
+        baseline_latency = baseline_end - baseline_start
         baseline_metrics = evaluate_baseline_response(essay)
-        baseline_metrics.update({"type": "baseline", "id": i})
+        baseline_metrics.update({"type": "baseline", "id": i, "latency_seconds": baseline_latency})
         baseline_records.append(baseline_metrics)
+        print(f"Baseline metrics (Latency: {baseline_latency:.3f}s):", baseline_metrics)
 
     return pd.DataFrame(model_records + baseline_records)
 
@@ -208,7 +232,7 @@ def compare_with_baseline(n=10):
 def generate_comparison_table_markdown(df: pd.DataFrame) -> str:
     metrics = [
         "avg_response_length", "response_completeness", "cultural_alignment_score",
-        "diversity_entropy", "sensitivity_coverage", "sensitive_topic_mention_rate"
+        "diversity_entropy", "sensitivity_coverage", "sensitive_topic_mention_rate", "latency_seconds"
     ]
     table = "| Metric | Baseline Avg | Model Avg |\n|--------|---------------|-----------|\n"
     for metric in metrics:
@@ -229,6 +253,6 @@ def save_markdown_table(df: pd.DataFrame, path: str = "./comparison_table.md"):
 
 
 if __name__ == "__main__":
-    df_results = compare_with_baseline(n=3)  # Adjust n as needed
+    df_results = compare_with_baseline(n=10)  # Adjust n as needed
     path = save_markdown_table(df_results)
     print(f"\n✅ Markdown saved to: {path}")

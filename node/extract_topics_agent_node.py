@@ -2,14 +2,12 @@
 from google import genai
 from typing import Dict
 from llmagentsetting import llm_clients
+from utility.measure_time import measure_time
 
-client = llm_clients.LambdaAPIClient()
-
+@measure_time
 def extract_sensitive_topics(state) -> Dict:
     question = state["question_meta"]["original"]
 
-    
-    
     # Concatenate the prompt with the question and pass it to the GeminiClient
     prompt = f"""Identify potentially insensitive language or generalizations in the input.
     Focus on the core subject matter that could potentially involve:
@@ -37,13 +35,19 @@ def extract_sensitive_topics(state) -> Dict:
     {question}
     ```     
     """
+
+    client = llm_clients.LambdaAPIClient(state=state)
     topics = client.get_completion(prompt)
-    return {
-        "question_meta": {**state["question_meta"], "sensitive_topics": topics},
-        "db_action": "write",
-        "db_key": "sensitive_topics",
-        "db_value": topics,
-    }
+
+    # ✅ Proper in-place state updates
+    state["question_meta"]["sensitive_topics"] = topics
+    state["activate_extract_topics"] = False
+    state["topics_extracted"] = True
+    state["activate_router"] = True
+    state["__next__"] = "planner"
+    state["current_state"] = "planner"
+
+    return state
 
 
 if __name__ == "__main__":
