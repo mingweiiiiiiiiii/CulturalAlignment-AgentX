@@ -26,6 +26,8 @@ class GraphState(TypedDict, total=False):
     topics_extracted: Optional[bool]
     
     activate_set: List[Dict[str, Any]]
+    node_times: Dict[str, float]
+    api_calls: Dict[str, int]
 """
 class GraphState:
     

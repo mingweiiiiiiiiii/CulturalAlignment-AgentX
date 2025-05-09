@@ -1,12 +1,12 @@
 from typing import Dict, List, Tuple, Any
 import google.generativeai as genai
 from llmagentsetting import llm_clients
+from utility.measure_time import measure_time
 
-
-client = llm_clients.LambdaAPIClient()
 # Define ExpertResponse type
 ExpertResponse = Dict[str, str]
 #  Compose Final Response
+@measure_time
 def compose_final_response(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Compose a final response based on multiple cultural expert inputs,
@@ -62,7 +62,7 @@ def compose_final_response(state: Dict[str, Any]) -> Dict[str, Any]:
     # Step 3: Generate final composed response
     # GoogleStudio_API_KEY = "AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"
     # genai.configure(api_key=GoogleStudio_API_KEY)
-
+    client = llm_clients.LambdaAPIClient(state=state)
     try:
         response = client.get_completion(llm_prompt)
         final_response = response
@@ -82,7 +82,7 @@ def compose_final_response(state: Dict[str, Any]) -> Dict[str, Any]:
             "final": final_response
         }
     )
-
+    state["activate_compose"] = False
     return {
         "response_state": response_state,
     }
