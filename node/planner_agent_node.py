@@ -1,44 +1,34 @@
 from typing import Dict
+from utility.measure_time import measure_time
 
-# === Global counter for planner ===
-planner_counter = 0
-
+@measure_time
 def planner_agent(state) -> Dict:
-    """Planner that routes based on current state and graph iteration."""
+    counter = state.get("planner_counter", 0) + 1
+    state["planner_counter"] = counter
 
-    counter = state["planner_counter"] + 1 if "planner_counter" in state else 1
-    
     if counter == 1:
-        return {
-            "planner_counter": counter,
-            "activate_sensitivity_check": True,
-            "__next__": "sensitivity_check",
-            "current_state": "sensitivity_check"
-        }
-    elif counter == 2 and state.get("is_sensitive") is True:
-        return {
-            "planner_counter": counter,
-            "activate_extract_topics": True,
-            "__next__": "extract_topics",
-            "current_state": "extract_topics"
-        }
+        state["activate_sensitivity_check"] = True
+        state["__next__"] = "sensitivity_check"
+
+    elif counter == 2 and state.get("is_sensitive", False):
+        state["activate_extract_topics"] = True
+        state["__next__"] = "extract_topics"
+
     elif counter == 2 and not state.get("is_sensitive", False):
-        return {
-            "planner_counter": counter,
-            "__next__": "compose",
-            "current_state": "compose"
-        }
-    elif counter >= 3:
-        if state.get("topics_extracted"):
-            return {
-                "planner_counter": counter,
-                "activate_router": True,
-                "__next__": "router",
-                "current_state": "router"
-            }
+        state["activate_compose"] = True
+        state["__next__"] = "compose"
+
+    elif counter == 3:
+        if state.get("topics_extracted", False):
+            state["activate_router"] = True
+            state["__next__"] = "router"
         else:
-            return {
-                "planner_counter": counter,
-                "__next__": "compose",
-                "current_state": "compose"
-            }
+            state["activate_compose"] = True
+            state["__next__"] = "compose"
+
+    elif counter >= 4:
+        state["activate_compose"] = True
+        state["__next__"] = "compose"
+
+    state["current_state"] = state["__next__"]
+    return state

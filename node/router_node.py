@@ -6,7 +6,7 @@ import ollama
 # Mocked classes (replace with your real imports)
 from node.cultural_expert_node import CulturalExpertManager
 from node.sen_agent_node import determine_cultural_sensitivity
-
+from utility.measure_time import measure_time
 
 # === Embedding Function ===
 def embed_persona(persona: Dict[str, Any]) -> np.ndarray:
@@ -23,6 +23,7 @@ def embed_persona(persona: Dict[str, Any]) -> np.ndarray:
 
 
 # === Router Function ===
+@measure_time
 def route_to_cultures(
     state: Dict[str, Any],
     lambda_1: float = 0.6,
@@ -34,7 +35,7 @@ def route_to_cultures(
 
     # Setup experts
 
-    manager = CulturalExpertManager()
+    manager = CulturalExpertManager(state=state)
 
     # Generate experts
     expert_instances = manager.generate_expert_instances()
@@ -114,7 +115,7 @@ def route_to_cultures(
             {"culture": culture, "weight": float(weight), "prompt": prompt_text}
         )
     state["question_meta"]["relevant_cultures"] = [e["culture"] for e in selected_experts]
-    
+    state["activate_router"] = False
     return {
     "activate_set": selected_experts
     }

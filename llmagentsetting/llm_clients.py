@@ -121,7 +121,7 @@ class LambdaAPIClient:
     ]
     DEFAULT_MODEL = "qwen25-coder-32b-instruct"
 
-    def __init__(self, api_key=None, germini_api_key=None):
+    def __init__(self, api_key=None, germini_api_key=None, state=None):
         load_dotenv(".env", override=True)
         self.api_key = api_key or os.getenv("LAMBDA_API") or lambda_api_key
 
@@ -137,6 +137,7 @@ class LambdaAPIClient:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
+        self.state = None
 
     def get_completion(
         self,
@@ -164,6 +165,16 @@ class LambdaAPIClient:
         response = requests.post(self.url, headers=self.headers, json=data)
         #print("Lambda API response:", response.status_code, response.text)
         response_data = response.json()
+        # NEW: Count API call if state is provided
+        if self.state and "current_node" in self.state:
+            print("State: in lambda client")
+            node_name = self.state["current_node"]
+            if node_name:
+                if "api_calls" not in self.state:
+                    self.state["api_calls"] = {}
+                if node_name not in self.state["api_calls"]:
+                    self.state["api_calls"][node_name] = 0
+                self.state["api_calls"][node_name] += 1
 
         try:
             return response_data["choices"][0]["text"].strip()
