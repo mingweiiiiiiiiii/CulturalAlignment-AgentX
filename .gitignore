@@ -50,5 +50,5 @@ htmlcov/
 # Local development
 .python-version
 
+# persona_data_list.json (ensure the file exists for Docker)
 # persona_data_list.json
-persona_data_list.json

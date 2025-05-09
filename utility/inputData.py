@@ -68,6 +68,11 @@ class PersonaSampler:
     # Randomly sample n profiles
     # -------------------------------
     def sample_profiles(self, n=1):
+        if not self.sampling_fields:
+            raise RuntimeError(
+                "Persona template missing or empty; ensure /app/corpora/persona_data_list.json is present"
+            )
+        n = min(n, len(self.sampling_fields))
         return random.sample(self.sampling_fields, n)
 
     # -------------------------------

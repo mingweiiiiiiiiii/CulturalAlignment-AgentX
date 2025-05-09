@@ -56,7 +56,11 @@ def route_to_cultures(
 
     for expert_name in expert_list:
         expert = expert_instances[expert_name]
-        generated_response = expert.generate_response(q)
+        try:
+            generated_response = expert.generate_response(q)
+        except Exception as e:
+            print(f"Error generating response for culture {expert_name}: {e}")
+            generated_response = ""
         dict_expert_embeddings[expert_name] = embed_persona(
             {"response": generated_response}
         )

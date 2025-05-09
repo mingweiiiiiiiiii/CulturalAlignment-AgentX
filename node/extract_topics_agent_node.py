@@ -1,7 +1,7 @@
-
 from google import genai
 from typing import Dict
 from llmagentsetting import llm_clients
+import json
 
 client = llm_clients.LambdaAPIClient()
 
@@ -37,7 +37,11 @@ def extract_sensitive_topics(state) -> Dict:
     {question}
     ```     
     """
-    topics = client.get_completion(prompt)
+    try:
+        topics = client.get_completion(prompt)
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON in extract_sensitive_topics: {e}")
+        topics = ""
     return {
         "question_meta": {**state["question_meta"], "sensitive_topics": topics},
         "db_action": "write",

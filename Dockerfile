@@ -10,17 +10,26 @@ COPY requirements.txt .
 # Install the required packages
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Ollama
-RUN curl -sSL https://ollama.com/download.sh | sh
+# Install system dependencies for Ollama
+RUN apt-get update && apt-get install -y curl ca-certificates tar bash && rm -rf /var/lib/apt/lists/*
 
-# Pull the mxbai-embed-large model
-RUN ollama pull mxbai-embed-large
+# Install Ollama CLI via official installer with pip fallback, then verify
+RUN curl -fsSL https://ollama.com/install.sh | bash \
+    || pip install ollama && \
+    # Ensure binary is executable and on PATH
+    chmod +x /usr/local/bin/ollama && \
+    ln -sf /usr/local/bin/ollama /usr/bin/ollama && \
+    ollama --version
+
+# Pulling the embedding model is deferred to container runtime when the Ollama API is running
 
 # Copy the rest of the project files to the container
 COPY . .
 
-# Command to run the main script
-CMD ["python", "main.py"]
+# Add custom entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Set the image name
 LABEL image_name="cultural-alignment-server"

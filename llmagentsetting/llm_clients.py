@@ -162,13 +162,18 @@ class LambdaAPIClient:
             raise ValueError("Prompt must be a string.")
         
         response = requests.post(self.url, headers=self.headers, json=data)
-        #print("Lambda API response:", response.status_code, response.text)
-        response_data = response.json()
-
+        # Parse JSON safely
         try:
-            return response_data["choices"][0]["text"].strip()
-        except (KeyError, IndexError):
-            return "Error: Unable to extract text from API response."
+            response_data = response.json()
+        except ValueError as e:
+            print(f"Error parsing JSON from Lambda API: {e}, raw response: {response.text}")
+            return ""
+        # Extract text field safely
+        try:
+            return response_data.get("choices", [])[0].get("text", "").strip()
+        except Exception as e:
+            print(f"Error extracting text from Lambda API response: {e}, data: {response_data}")
+            return ""
 
 def test_lambdamain():
     prompt = input("Enter your prompt: ").strip()

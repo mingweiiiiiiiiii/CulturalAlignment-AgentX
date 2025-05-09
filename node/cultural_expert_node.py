@@ -37,12 +37,19 @@ class CulturalExpert(ABC):
 
     def generate_response(self, question: str) -> str:
         prompt = self.enhance_prompt(question)
-        return client.get_completion(prompt)
+        try:
+            return client.get_completion(prompt)
+        except Exception as e:
+            print(f"Error in CulturalExpert.generate_response: {e}")
+            return ""
 
     def __call__(self, state: Dict) -> str:
         question = state["question_meta"]["original"]
-        response_text = client.get_completion(question)
-        return response_text
+        try:
+            return client.get_completion(question)
+        except Exception as e:
+            print(f"Error in CulturalExpert.__call__: {e}")
+            return ""
 
 
 # === Manager Class for Experts ===

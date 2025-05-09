@@ -7,20 +7,16 @@ services:
       dockerfile: Dockerfile
     container_name: cultural-agent-container
     volumes:
-      - ./outputs:/app/outputs          # Store evaluation_chart.png outside container
-      - ./logs:/app/logs                # Save logs
+      - ./outputs:/app/outputs  # Store evaluation_chart.png outside container
+      - ./logs:/app/logs        # Save logs
+    env_file:
+      - .env
     environment:
-      PYTHONUNBUFFERED: 1               # Force real-time logging
-    entrypoint: >
-      bash -c "
-        echo '🧹 Cleaning old outputs...' &&
+      PYTHONUNBUFFERED: 1      # Force real-time logging
+    command: >                # Use shell to manage outputs and logs
+      sh -c "
+        mkdir -p /app/outputs /app/logs &&
         rm -f /app/outputs/evaluation_chart.png /app/logs/run.log &&
-        echo '🚀 Installing requirements...' &&
-        pip install -r requirements.txt && \
-        echo '🚀 Installing ollama...' &&
-        pip install ollama && \
-        echo '🚀 Pulling mxbai-embed-large...' &&
-        ollama pull mxbai-embed-large && \
         echo '🚀 Starting system...' &&
         python main.py | tee /app/logs/run.log
       "
