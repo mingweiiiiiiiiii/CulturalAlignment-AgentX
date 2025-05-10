@@ -1,26 +1,21 @@
 # Use the official Python image from the Docker Hub
-FROM python:3.12.7-slim
+FROM python:3.11-slim
 
-# Set the working directory in the container
+# Set the working directory
 WORKDIR /app
 
-# Copy the requirements file to the container
-COPY requirements.txt .
-
-# Install the required packages
+# Copy the requirements file and install dependencies
+COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Ollama
-RUN curl -sSL https://ollama.com/download.sh | sh
-
-# Pull the mxbai-embed-large model
-RUN ollama pull mxbai-embed-large
-
-# Copy the rest of the project files to the container
+# Copy the rest of the application code
 COPY . .
 
-# Command to run the main script
-CMD ["python", "main.py"]
+# Ensure the script is executable
+RUN chmod +x /app/run_docker.sh
 
-# Set the image name
-LABEL image_name="cultural-alignment-server"
+# Expose the port the app runs on (if any, for example, if it's a web service)
+# EXPOSE 8000
+
+# Command to run the application
+CMD ["/app/run_docker.sh"]

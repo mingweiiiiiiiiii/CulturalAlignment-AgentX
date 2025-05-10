@@ -1,5 +1,3 @@
-
-from google import genai
 from typing import Dict
 from llmagentsetting import llm_clients
 from utility.measure_time import measure_time
@@ -36,8 +34,8 @@ def extract_sensitive_topics(state) -> Dict:
     ```     
     """
 
-    client = llm_clients.LambdaAPIClient(state=state)
-    topics = client.get_completion(prompt)
+    client = llm_clients.OllamaClient() # Pass state if OllamaClient is adapted to use it
+    topics = client.generate(prompt, options={"num_predict": 50}) # Adjust num_predict as needed
 
     # ✅ Proper in-place state updates
     state["question_meta"]["sensitive_topics"] = topics

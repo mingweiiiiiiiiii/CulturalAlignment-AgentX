@@ -1,29 +1,14 @@
 from abc import ABC
 from typing import Dict
-from google import genai
 import unittest
 from llmagentsetting import llm_clients
-
-# === LLM Model Wrapper ===
-# class LLMModel:
-#     def __init__(self):
-#         self.api_key = "AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"  # Your API Key
-#         self.model_name = "gemini-2.0-flash"
-#         self.client = genai.Client(api_key=self.api_key)
-
-#     def generate(self, prompt: str) -> str:
-#         response = self.client.models.generate_content(
-#             model=self.model_name, contents=prompt
-#         )
-#         return response.text.strip()
-
 
 # === Cultural Expert Base Class ===
 class CulturalExpert(ABC):
     def __init__(self, culture_name: str, country_name: str, state: Dict = None):
         self.culture_name = culture_name
         self.country_name = country_name
-        self.client = llm_clients.LambdaAPIClient(state=state)
+        self.client = llm_clients.OllamaClient()  # Pass state if OllamaClient is adapted to use it
 
     def enhance_prompt(self, question: str) -> str:
         return (
@@ -37,11 +22,12 @@ class CulturalExpert(ABC):
 
     def generate_response(self, question: str) -> str:
         prompt = self.enhance_prompt(question)
-        return self.client.get_completion(prompt)
+        return self.client.generate(prompt, options={"num_predict": 150})  # Adjust num_predict as needed
 
     def __call__(self, state: Dict) -> str:
         question = state["question_meta"]["original"]
-        response_text = self.client.get_completion(question)
+        enhanced_prompt = self.enhance_prompt(question)  # Use enhanced prompt
+        response_text = self.client.generate(enhanced_prompt, options={"num_predict": 150})  # Adjust num_predict
         return response_text
 
 

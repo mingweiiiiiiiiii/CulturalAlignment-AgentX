@@ -1,6 +1,6 @@
 from llmagentsetting import llm_clients
 
-client = llm_clients.LambdaAPIClient()
+client = llm_clients.OllamaClient()
 
 
 def generate_baseline_essay(profiles: list, merged_question: str) -> str:
@@ -26,5 +26,5 @@ Your essay should be well-structured and objective. Do not mention specific cult
 [Essay]
 """
     
-    response = client.get_completion(prompt)
+    response = client.generate(prompt, options={"num_predict": 200}) # Adjust num_predict as needed
     return response

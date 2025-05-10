@@ -1,5 +1,4 @@
 from typing import Dict, List, Tuple, Any
-import google.generativeai as genai
 from llmagentsetting import llm_clients
 from utility.measure_time import measure_time
 
@@ -60,11 +59,9 @@ def compose_final_response(state: Dict[str, Any]) -> Dict[str, Any]:
     llm_prompt = "\n".join(prompt_parts)
 
     # Step 3: Generate final composed response
-    # GoogleStudio_API_KEY = "AIzaSyAlMLq2h1YHKJgOm6hds2aHz_iWrByXacM"
-    # genai.configure(api_key=GoogleStudio_API_KEY)
-    client = llm_clients.LambdaAPIClient(state=state)
+    client = llm_clients.OllamaClient()  # Pass state if OllamaClient is adapted to use it
     try:
-        response = client.get_completion(llm_prompt)
+        response = client.generate(llm_prompt, options={"num_predict": 250})  # Adjust num_predict as needed
         final_response = response
     except Exception as e:
         final_response = f"[LLM Error: {str(e)}]"
@@ -93,47 +90,48 @@ def compose_final_response(state: Dict[str, Any]) -> Dict[str, Any]:
 if __name__ == "__main__":
     pass
 
+    # Commented out test code that might cause issues due to missing definitions
     # Dummy GraphState simulation
-    state = GraphState(
-        {
-            "user_profile": {
-                "preferences": {"language": "English"},
-                "demographics": {"age": 30, "country": "Spain"},
-            },
-            "question_meta": {
-                "original": "How does culture affect negotiation styles?",
-                "sensitive_topics": ["Spain", "Mexico"],
-                "relevant_cultures": ["Spain", "Mexico", "Argentina"],
-            },
-            "response_state": {},
-        }
-    )
+    # state = GraphState(
+    #     {
+    #         "user_profile": {
+    #             "preferences": {"language": "English"},
+    #             "demographics": {"age": 30, "country": "Spain"},
+    #         },
+    #         "question_meta": {
+    #             "original": "How does culture affect negotiation styles?",
+    #             "sensitive_topics": ["Spain", "Mexico"],
+    #             "relevant_cultures": ["Spain", "Mexico", "Argentina"],
+    #         },
+    #         "response_state": {},
+    #     }
+    # )
 
     # Simulated activate_set (router output)
-    state["activate_set"] = [
-        (
-            "Spain",
-            0.9,
-            "In Spain, negotiation often involves building personal relationships first.",
-        ),
-        (
-            "Mexico",
-            0.8,
-            "Mexican negotiation styles emphasize courtesy and long-term trust.",
-        ),
-        (
-            "Argentina",
-            0.7,
-            "Argentinian negotiators are known for strategic flexibility and patience.",
-        ),
-    ]
+    # state["activate_set"] = [
+    #     {
+    #         "culture": "Spain",
+    #         "weight": 0.9,
+    #         "prompt": "In Spain, negotiation often involves building personal relationships first.",
+    #     },
+    #     {
+    #         "culture": "Mexico",
+    #         "weight": 0.8,
+    #         "prompt": "Mexican negotiation styles emphasize courtesy and long-term trust.",
+    #     },
+    #     {
+    #         "culture": "Argentina",
+    #         "weight": 0.7,
+    #         "prompt": "Argentinian negotiators are known for strategic flexibility and patience.",
+    #     },
+    # ]
 
-    output = compose_final_response(state)
+    # output = compose_final_response(state)
 
-    print("\n✅ Composed Final State:")
-    for k, v in output.items():
-        print(f"{k}: {v}")
+    # print("\n✅ Composed Final State:")
+    # for k, v in output.items():
+    #     print(f"{k}: {v}")
 
-    # Print final response word count
-    final_text = output["response_state"]["final"]
-    print("\n🔢 Final Response Word Count:", len(final_text.split()))
+    # # Print final response word count
+    # final_text = output["response_state"]["final"]
+    # print("\n🔢 Final Response Word Count:", len(final_text.split()))

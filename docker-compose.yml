@@ -11,16 +11,13 @@ services:
       - ./logs:/app/logs                # Save logs
     environment:
       PYTHONUNBUFFERED: 1               # Force real-time logging
+      OLLAMA_HOST: http://host.docker.internal:11434 # Connect to Ollama on Docker host
     entrypoint: >
       bash -c "
         echo '🧹 Cleaning old outputs...' &&
         rm -f /app/outputs/evaluation_chart.png /app/logs/run.log &&
         echo '🚀 Installing requirements...' &&
         pip install -r requirements.txt && \
-        echo '🚀 Installing ollama...' &&
-        pip install ollama && \
-        echo '🚀 Pulling mxbai-embed-large...' &&
-        ollama pull mxbai-embed-large && \
         echo '🚀 Starting system...' &&
         python main.py | tee /app/logs/run.log
       "

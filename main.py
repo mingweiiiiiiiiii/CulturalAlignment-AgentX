@@ -14,12 +14,16 @@ from utility.baseline import generate_baseline_essay
 import time
 
 from llmagentsetting import llm_clients
-use_gemini = False
-if use_gemini:
-    judgeModel = llm_clients.GeminiClient()
-else:
-    print("❗Falling back to Lambda API client")
-    judgeModel = llm_clients.LambdaAPIClient()
+
+# Instantiate the client for model checking and for the judge
+# This will also ensure the default model 'phi4:14b-q4_K_M' and 'mxbai-embed-large' are checked/pulled.
+ollama_client_instance = llm_clients.OllamaClient()
+REQUIRED_MODELS = ["phi4:14b-q4_K_M", "mxbai-embed-large"] # Ensure these are checked
+ollama_client_instance.ensure_models_are_available(REQUIRED_MODELS)
+
+
+# Replace with OllamaClient
+judgeModel = ollama_client_instance # Use the same instance that performed the check
 
 
 def shannon_entropy(labels):
@@ -131,18 +135,14 @@ Output only the JSON object with the six keys. No prose.
 
     # Step 3: Get LLM-generated metric scores
     try:
-        if use_gemini:
-            generate_response = judgeModel.generate(prompt)
-        elif isinstance(judgeModel, llm_clients.LambdaAPIClient):
-            generate_response = judgeModel.get_completion(
+        # Use OllamaClient for evaluation
+        generate_response = judgeModel.generate(
             prompt,
-            temperature=0,
-            max_tokens=200
+            temperature=0,  # Ollama specific options can be passed here
+            options={"num_predict": 200, "temperature": 0.0}
         )
-            print("RAW LLM OUTPUT ▶", repr(generate_response))
-        else:
-            raise RuntimeError("LLM client does not have a supported generate method")
-        
+        print("RAW LLM OUTPUT ▶", repr(generate_response))
+
         judged_metrics = json.loads(generate_response) if isinstance(generate_response, str) else generate_response
     except Exception as e:
         print(f"LLM response parsing failed: {e}")
