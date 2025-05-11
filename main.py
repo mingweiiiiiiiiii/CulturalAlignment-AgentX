@@ -308,10 +308,7 @@ def save_markdown_table(df: pd.DataFrame, path: str = "./comparison_table.md"):
     },
 '''
 
-import os
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+
 
 # Assume judgeModel is already defined (e.g., LambdaAPIClient or GeminiClient)
 from llmagentsetting import llm_clients
@@ -355,7 +352,7 @@ def analyze_attribute_correlations(
 
     metric_cols = [
         "avg_response_length", "response_completeness", "cultural_alignment_score",
-        "diversity_entropy", "sensitivity_coverage", "sensitive_topic_mention_rate", "latency_seconds"
+        "diversity_entropy", "sensitivity_coverage", "sensitive_topic_mention_rate"
     ]
     metric_cols = [col for col in metric_cols if col in df.columns]
 
