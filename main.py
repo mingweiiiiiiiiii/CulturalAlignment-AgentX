@@ -338,12 +338,33 @@ def infer_boolean_from_text(field: str, text: str) -> bool:
         return pd.NA
 
 # === Preprocessing user profiles ===
+'''
+Structured by processing priority:
+
+Special handling for known structured fields (age, income, education, big five scores)
+
+LLM-based simplification for free-text fields (e.g., mannerisms, lifestyle)
+
+For all other string fields, automatically determine via LLM whether:
+
+It is binary → call infer_boolean_from_text
+
+Or categorical → call simplify_attribute
+
+Avoids redundant processing
+
+Adds _bool or _cat suffix to new columns
+
+'''
 def preprocess_user_profiles(df: pd.DataFrame) -> pd.DataFrame:
+    processed_cols = set()
+
     traits = ["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"]
 
     def parse_big_five(text):
         result = {trait: pd.NA for trait in traits}
-        if pd.isna(text): return result
+        if pd.isna(text):
+            return result
         parts = [p.strip() for p in text.split(",")]
         for part in parts:
             if ':' in part:
@@ -351,12 +372,16 @@ def preprocess_user_profiles(df: pd.DataFrame) -> pd.DataFrame:
                 result[k.strip().lower()] = v.strip().lower()
         return result
 
+    # === 1. Structured processing: Big Five
     if "big five scores" in df.columns:
         parsed = df["big five scores"].apply(parse_big_five)
         for trait in traits:
             df[trait] = parsed.apply(lambda d: d.get(trait, pd.NA))
+            processed_cols.add(trait)
         df.drop(columns=["big five scores"], inplace=True)
+        processed_cols.add("big five scores")
 
+    # === 2. LLM simplification for descriptive fields
     descriptive_fields = [
         "detailed job description", "lifestyle",
         "defining quirks", "mannerisms", "personal time"
@@ -364,26 +389,63 @@ def preprocess_user_profiles(df: pd.DataFrame) -> pd.DataFrame:
     for field in descriptive_fields:
         if field in df.columns:
             df[field] = df[field].apply(lambda x: simplify_attribute(field, x) if isinstance(x, str) else pd.NA)
+            processed_cols.add(field)
 
+    # === 3. Bucketing age, income, education
     if "age" in df.columns:
         df["age"] = df["age"].apply(lambda x: convert_age_to_bucket(str(x)) if pd.notna(x) else pd.NA)
+        processed_cols.add("age")
 
     if "income" in df.columns:
         df["income"] = df["income"].apply(lambda x: convert_income_to_range(str(x)) if pd.notna(x) else pd.NA)
+        processed_cols.add("income")
 
     if "education" in df.columns:
         df["education"] = df["education"].apply(lambda x: simplify_education_level(str(x)) if pd.notna(x) else pd.NA)
+        processed_cols.add("education")
 
+    # === 4. For other string fields, auto-infer type using LLM
     for col in df.columns:
-        if df[col].dtype == "object" and df[col].notna().all():
-            sample_val = df[col].iloc[0]
-            if isinstance(sample_val, str) and len(sample_val.split()) < 10:
+        if col in processed_cols:
+            continue
+        if df[col].dtype != "object" or df[col].isna().all():
+            continue
+
+        try:
+            sample_val = df[col].dropna().iloc[0]
+            if not isinstance(sample_val, str):
+                continue
+
+            # Ask LLM whether this is a binary or categorical field
+            prompt = (
+                f"Based on the user's '{col}' field, determine whether this is a binary (True/False) field "
+                f"or a multi-class categorical attribute.\n"
+                f"Example value: {sample_val}\n"
+                f"Return only one word: 'binary' or 'categorical'."
+            )
+            decision = judgeModel.generate(prompt).strip().lower()
+
+            if decision == "binary":
                 df[col + "_bool"] = df[col].apply(lambda x: infer_boolean_from_text(col, x) if isinstance(x, str) else pd.NA)
+            elif decision == "categorical":
+                df[col + "_cat"] = df[col].apply(lambda x: simplify_attribute(col, x) if isinstance(x, str) else pd.NA)
+
+            processed_cols.add(col)
+
+        except Exception as e:
+            print(f"⚠️ Skipping column `{col}` due to error: {e}")
 
     return df
 
+
 # === Correlation analysis with markdown summary ===
-def analyze_attribute_correlations(input: list, output_dir="./correlation_analysis", corr_threshold=0.3, save_global_summary=True):
+
+def analyze_attribute_correlations(
+    input: list,
+    output_dir="./correlation_analysis",
+    corr_threshold=0.3,
+    save_global_summary=True
+):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
@@ -402,26 +464,20 @@ def analyze_attribute_correlations(input: list, output_dir="./correlation_analys
         "diversity_entropy", "sensitivity_coverage", "sensitive_topic_mention_rate"
     ]
     metric_cols = [col for col in metric_cols if col in df.columns]
+
+    # Use enhanced preprocessing
     df = preprocess_user_profiles(df)
 
+    # Dynamically determine non-metric profile fields
+    profile_cols = [col for col in df.columns if col not in metric_cols and col not in {"type", "id"}]
+
+    # Group profile attributes by heuristics for visualization
     grouped_attrs = {
-        "Demographic & Identity": [
-            "age", "sex", "race", "ancestry", "place of birth", "citizenship_bool", "religion"
-        ],
-        "Socioeconomic & Occupational": [
-            "education", "employment status_bool", "income", "detailed job description",
-            "occupation category", "industry category", "class of worker"
-        ],
-        "Health & Lifestyle": [
-            "disability_bool", "health insurance_bool", "personal time", "lifestyle", "veteran status_bool"
-        ],
-        "Family & Household Context": [
-            "marital status", "household type_bool", "family presence and age_bool", "household language"
-        ],
-        "Psychological & Ideological": [
-            "openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism",
-            "ideology", "political views", "defining quirks", "mannerisms"
-        ]
+        "Demographic & Identity": [col for col in profile_cols if any(k in col for k in ["age", "sex", "race", "ancestry", "birth", "citizenship", "religion"])],
+        "Socioeconomic & Occupational": [col for col in profile_cols if any(k in col for k in ["education", "employment", "income", "occupation", "industry", "class of worker"])],
+        "Health & Lifestyle": [col for col in profile_cols if any(k in col for k in ["health", "disability", "veteran", "lifestyle", "personal time"])],
+        "Family & Household Context": [col for col in profile_cols if any(k in col for k in ["marital", "household", "family"])],
+        "Psychological & Ideological": [col for col in profile_cols if any(k in col for k in ["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism", "ideology", "political", "quirks", "mannerisms"])],
     }
 
     global_top_corrs = []
@@ -468,6 +524,7 @@ def analyze_attribute_correlations(input: list, output_dir="./correlation_analys
         all_top.to_csv(csv_path, index=False)
         generate_enhanced_markdown_summary(csv_path, os.path.join(output_dir, "global_top_correlations.md"), output_dir)
 
+
 # === Markdown generator ===
 def generate_enhanced_markdown_summary(summary_csv, output_md, base_dir):
     if not os.path.exists(summary_csv):
@@ -488,43 +545,44 @@ def generate_enhanced_markdown_summary(summary_csv, output_md, base_dir):
     }
 
     with open(output_md, "w", encoding="utf-8") as f:
-        f.write("# 🧠 Correlation Summary Report\n\n")
-        f.write("This report summarizes the strongest observed correlations between **simplified user profile attributes** and model evaluation metrics.\n\n")
-        f.write("Each section links to the full correlation data and visual summary.\n\n")
+        f.write("# 🧠 Correlation Summary Report\\n\\n")
+        f.write("This report summarizes the strongest observed correlations between **simplified user profile attributes** and model evaluation metrics.\\n\\n")
+        f.write("Each section links to the full correlation data and visual summary.\\n\\n")
 
         for metric in df["metric"].unique():
             df_metric = df[df["metric"] == metric].copy()
             df_metric["abs_corr"] = df_metric["correlation"].abs()
             df_sorted = df_metric.sort_values(by="correlation", ascending=False)
 
-            f.write(f"## 📊 Metric: `{metric}`\n")
-            f.write(f"**Interpretation**: {metric_commentary.get(metric, 'No interpretation available.')}\n\n")
+            f.write(f"## 📊 Metric: `{metric}`\\n")
+            f.write(f"**Interpretation**: {metric_commentary.get(metric, 'No interpretation available.')}\\n\\n")
 
             group_name = df_metric["group"].iloc[0]
             group_key = group_name.lower().replace(" ", "_")
-
-            f.write(f"📎 [Full correlation CSV](./{group_key}_correlation.csv)\n")
-            f.write(f"🖼️ [Top 3 correlation plot](./{group_key}_top_corr_plot.png)\n\n")
+            f.write(f"📎 [Full correlation CSV](./{group_key}_correlation.csv)\\n")
+            f.write(f"🖼️ [Top 3 correlation plot](./{group_key}_top_corr_plot.png)\\n\\n")
 
             top_pos = df_sorted.iloc[0]
-            f.write("**🔼 Top Positive Correlation**\n")
-            f.write(f"- **Attribute**: `{top_pos['attribute']}` from *{top_pos['group']}*\n")
-            f.write(f"- **Correlation**: r = {top_pos['correlation']:.2f}\n\n")
+            f.write("**🔼 Top Positive Correlation**\\n")
+            f.write(f"- **Attribute**: `{top_pos['attribute']}` from *{top_pos['group']}*\\n")
+            f.write(f"- **Correlation**: r = {top_pos['correlation']:.2f}\\n\\n")
 
             top_neg = df_metric.sort_values(by="correlation", ascending=True).iloc[0]
-            f.write("**🔽 Top Negative Correlation**\n")
-            f.write(f"- **Attribute**: `{top_neg['attribute']}` from *{top_neg['group']}*\n")
-            f.write(f"- **Correlation**: r = {top_neg['correlation']:.2f}\n\n")
+            f.write("**🔽 Top Negative Correlation**\\n")
+            f.write(f"- **Attribute**: `{top_neg['attribute']}` from *{top_neg['group']}*\\n")
+            f.write(f"- **Correlation**: r = {top_neg['correlation']:.2f}\\n\\n")
 
-            f.write("**📌 Notable Correlations (Top 3 by absolute value):**\n")
+            f.write("**📌 Notable Correlations (Top 3 by absolute value):**\\n")
             top3 = df_metric.sort_values(by="abs_corr", ascending=False).head(3)
             for _, row in top3.iterrows():
                 trend = "increase" if row["correlation"] > 0 else "decrease"
-                f.write(f"- `{row['attribute']}` (`{row['group']}`): r = {row['correlation']:.2f} → likely {trend} in `{metric}`\n")
+                f.write(f"- `{row['attribute']}` (`{row['group']}`): r = {row['correlation']:.2f} → likely {trend} in `{metric}`\\n")
 
-            f.write("\n---\n\n")
+            f.write("\\n---\\n\\n")
 
     print(f"✅ Enhanced correlation summary Markdown report saved to: {output_md}")
+
+
 
 
 if __name__ == "__main__":
