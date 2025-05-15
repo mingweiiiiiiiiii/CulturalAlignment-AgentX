@@ -361,7 +361,7 @@ def simplify_attribute(field_name: str, text: str) -> str:
         "Single-word label:"
     )
     try:
-        return judgeModel.generate(prompt).strip().split()[0].lower()
+        return judgeModel.get_completion(prompt).strip().split()[0].lower()
     except:
         return "unknown"
 
@@ -369,7 +369,7 @@ def simplify_attribute(field_name: str, text: str) -> str:
 def convert_age_to_bucket(age_str: str) -> str:
     prompt = f"Convert age to bucket (e.g., 'young adult', 'senior'): {age_str}"
     try:
-        return judgeModel.generate(prompt).strip().split()[0].lower()
+        return judgeModel.get_completion(prompt).strip().split()[0].lower()
     except:
         return "unknown"
 
@@ -377,7 +377,7 @@ def convert_age_to_bucket(age_str: str) -> str:
 def convert_income_to_range(income_str: str) -> str:
     prompt = f"Convert income '{income_str}' to category (e.g., 'low', 'medium', 'high'):"
     try:
-        return judgeModel.generate(prompt).strip().split()[0].lower()
+        return judgeModel.get_completion(prompt).strip().split()[0].lower()
     except:
         return "unknown"
 
@@ -385,7 +385,7 @@ def convert_income_to_range(income_str: str) -> str:
 def simplify_education_level(text: str) -> str:
     prompt = f"Categorize education: {text}"
     try:
-        return judgeModel.generate(prompt).strip().split()[0].lower()
+        return judgeModel.get_completion(prompt).strip().split()[0].lower()
     except:
         return "unknown"
 
@@ -398,7 +398,7 @@ def infer_boolean_from_text(field: str, text: str) -> bool:
         f"Return only True or False:"
     )
     try:
-        result = judgeModel.generate(prompt).strip().lower()
+        result = judgeModel.get_completion(prompt).strip().lower()
         return "true" in result
     except:
         return pd.NA
@@ -497,7 +497,7 @@ def preprocess_user_profiles(df: pd.DataFrame) -> pd.DataFrame:
                 f"Example value: {sample_val}\n"
                 f"Return only one word: 'binary' or 'categorical'."
             )
-            decision = judgeModel.generate(prompt).strip().lower()
+            decision = judgeModel.get_completion(prompt).strip().lower()
 
             if decision == "binary":
                 df[col + "_bool"] = df[col].apply(lambda x: infer_boolean_from_text(
