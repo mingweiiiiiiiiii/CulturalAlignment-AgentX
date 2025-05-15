@@ -1,0 +1,5 @@
+num_expert_responses,avg_response_length,std_response_length,response_completeness,cultural_alignment_score,cultural_alignment_variance,unique_cultures,diversity_entropy,sensitivity_coverage,sensitive_topic_mention_rate,total_node_latency,final_response_length,final_response_completeness,final_sensitivity_coverage,final_sensitive_topic_mention_rate,type,id,latency_seconds,timestamp
+3,889.0,125.93913874037199,1.0,1.0,0.0,3,1.584962500721156,0.0625,1.0,32.52591395378113,939.0,1.0,1.0,48.0,model,0,32.584773666,20250514_113546
+3,947.6666666666666,248.47043195429825,1.0,1.0,0.0,3,1.584962500721156,0.0625,1.0,38.13826584815979,1011.0,1.0,1.0,48.0,model,1,38.220509667,20250514_113546
+1,1225.0,0.0,1.0,0.2,0.8,0,0.0,0.0,0.0,,,,,,baseline,0,5.465698250000003,20250514_113546
+1,951.0,0.0,1.0,0.2,0.8,0,0.0,0.3,0.1,,,,,,baseline,1,4.27400841699999,20250514_113546
