@@ -4,7 +4,6 @@ from google import genai
 import unittest
 from llmagentsetting import llm_clients
 
-client = llm_clients.LambdaAPIClient()
 # === LLM Model Wrapper ===
 # class LLMModel:
 #     def __init__(self):
@@ -21,9 +20,10 @@ client = llm_clients.LambdaAPIClient()
 
 # === Cultural Expert Base Class ===
 class CulturalExpert(ABC):
-    def __init__(self, culture_name: str, country_name: str):
+    def __init__(self, culture_name: str, country_name: str, state: Dict = None):
         self.culture_name = culture_name
         self.country_name = country_name
+        self.client = llm_clients.LambdaAPIClient(state=state)
 
     def enhance_prompt(self, question: str) -> str:
         return (
@@ -37,18 +37,18 @@ class CulturalExpert(ABC):
 
     def generate_response(self, question: str) -> str:
         prompt = self.enhance_prompt(question)
-        return client.get_completion(prompt)
+        return self.client.get_completion(prompt)
 
     def __call__(self, state: Dict) -> str:
         question = state["question_meta"]["original"]
-        response_text = client.get_completion(question)
+        response_text = self.client.get_completion(question)
         return response_text
 
 
 # === Manager Class for Experts ===
 class CulturalExpertManager:
-    def __init__(self):
-    
+    def __init__(self, state: Dict = None):
+        self.state = state
         self.expert_instances = {}
 
     def generate_expert_instances(self):
@@ -57,6 +57,7 @@ class CulturalExpertManager:
             self.expert_instances[country] = CulturalExpert(
                 culture_name=f"{country} Culture",
                 country_name=country,
+                state=self.state
             )
         return self.expert_instances
 
@@ -70,8 +71,11 @@ class CulturalExpertManager:
         expert = self.get_expert(country_name)
         if expert is None:
             raise ValueError(f"No expert found for country: {country_name}")
-        state = {"question_meta": {"original": question}}
-        return expert(state)
+        if self.state is not None:
+            self.state["question_meta"] = {"original": question}
+        else:
+            self.state = {"question_meta": {"original": question}}
+        return expert(self.state)
 
 
 # === Example Usage ===

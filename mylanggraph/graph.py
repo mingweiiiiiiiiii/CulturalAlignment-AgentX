@@ -25,7 +25,6 @@ def create_cultural_graph(cultures: Optional[List[str]] = None):
     """
     cultures = cultures or ["US", "China", "India"]
     builder = StateGraph(GraphState)
-    builder.set_entry_point("planner")
 
     # Core nodes
     builder.add_node("planner", planner_agent)
@@ -33,17 +32,22 @@ def create_cultural_graph(cultures: Optional[List[str]] = None):
     builder.add_node("extract_topics", extract_sensitive_topics)
     builder.add_node("router", route_to_cultures)
     builder.add_node("compose", compose_final_response)
-
+    builder.set_entry_point("planner")
     # Graph transitions
     builder.add_conditional_edges(
         "planner",
         lambda state: [state["__next__"]] if "__next__" in state else [],
-        ["sensitivity_check", "router", "compose"],
+        ["sensitivity_check", "extract_topics", "router", "compose"],
     )
-    builder.add_edge("sensitivity_check", "extract_topics")
-    builder.add_edge("extract_topics", "router")
+    #builder.add_edge("sensitivity_check", "extract_topics")
+    #builder.add_edge("extract_topics", "router")
+    #builder.add_edge("router", "planner")
+    #builder.add_edge("planner", "compose")
+
+    # These bring control back to planner after each node
+    builder.add_edge("sensitivity_check", "planner")
+    builder.add_edge("extract_topics", "planner")
     builder.add_edge("router", "planner")
-    builder.add_edge("planner", "compose")
     builder.add_edge("compose", END)
 
     # Save checkpoints
