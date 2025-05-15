@@ -710,7 +710,7 @@ def save_paired_profiles_to_json(data, filename="paired_profiles_metrics.json"):
 
 
 if __name__ == "__main__":
-    df_results = compare_with_baseline(n=2)  # Adjust n as needed
+    df_results = compare_with_baseline(n=10)  # Adjust n as needed
     path = save_markdown_table(df_results)
     save_results_to_csv(df_results)
     print(f"\n✅ Markdown saved to: {path}")

@@ -77,11 +77,11 @@ def create_visualizations(csv_file_path):
     # Create the same chart but with log scale for better visibility of small values
     plt.figure(figsize=(14, 8))
 
-    # Handle zeros or negative values
+    # Handle zeros, negative, NaN, and extremely large values
     log_transposed = transposed_data.copy()
     for col in log_transposed.columns:
         log_transposed[col] = log_transposed[col].apply(
-            lambda x: 0.01 if x <= 0 else x)
+            lambda x: 0.01 if x <= 0 or pd.isna(x) else min(x, 1e6))  # Cap at 1 million
 
     # Create the log-scale bar chart
     ax = log_transposed.plot(kind='bar', width=0.7, logy=True)
@@ -98,11 +98,13 @@ def create_visualizations(csv_file_path):
     for i, container in enumerate(plt.gca().containers):
         type_name = transposed_data.columns[i]
         for j, patch in enumerate(container):
-            metric_name = transposed_data.index[j]
-            value = transposed_data.loc[metric_name, type_name]
-            height = patch.get_height()
-            ax.text(patch.get_x() + patch.get_width()/2., height*1.1,
-                    f'{value:.2f}', ha='center', va='bottom', rotation=90, fontsize=8)
+            if j < len(transposed_data.index):  # Ensure index is in range
+                metric_name = transposed_data.index[j]
+                value = transposed_data.loc[metric_name, type_name]
+                if not pd.isna(value):  # Only add text for non-NaN values
+                    height = patch.get_height()
+                    ax.text(patch.get_x() + patch.get_width()/2., height*1.1,
+                           f'{value:.2f}', ha='center', va='bottom', rotation=90, fontsize=8)
 
     plt.tight_layout()
     # Save instead of showing
