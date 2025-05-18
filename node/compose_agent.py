@@ -1,6 +1,7 @@
 from typing import Dict, List, Tuple, Any
 import google.generativeai as genai
 from llmagentsetting import llm_clients
+from node.cultural_expert_node import CulturalExpertManager
 from utility.measure_time import measure_time
 
 # Define ExpertResponse type
@@ -20,28 +21,37 @@ def compose_final_response(state: Dict[str, Any]) -> Dict[str, Any]:
     user_profile = state.get("user_profile", {})
     question_meta = state.get("question_meta", {})
     preferences = user_profile.get("preferences", {})
-    demographics = user_profile.get("demographics", {})
+    demographics = user_profile  # since separate demographic and preferences info is not provided
 
-    # Step 1: Select top-N cultures by weight
-    top_cultures = sorted(activate_set, key=lambda x: x["weight"], reverse=True)[:top_n]
-
-    expert_responses = [
-    {"culture": item["culture"], "response": item["prompt"]}
-    for item in top_cultures
-    ]
-
-    # Step 2: Create LLM prompt
     question = question_meta.get("original", "")
     sensitive_topics = question_meta.get("sensitive_topics", [])
     relevant_cultures = question_meta.get("relevant_cultures", [])
+    # Step 1: Select top-N experts by weight
+    top_experts = sorted(activate_set, key=lambda x: x["weight"], reverse=True)[:top_n]
+
+    manager = CulturalExpertManager(state=state)
+    manager.generate_expert_instances() 
+    expert_responses = []
+    for entry in top_experts:
+        culture = entry["culture"]
+        weight  = entry["weight"]
+        expert  = manager.get_expert(culture)              # retrieve the expert instance
+        response_text = expert.generate_response(question)  # only K LLM calls now
+        expert_responses.append({
+            "culture": culture,
+            "weight": weight,
+            "response": response_text
+        })
+
+    # Step 2: Create LLM prompt
 
     prompt_parts = [
         "You are a culturally-aware assistant tasked with composing a final response that is sensitive to the user's background and preferences.",
         "Please synthesize the expert responses and produce a final answer that is coherent, respectful, and **under 200 words**.",
         f"Question: {question}",
         "\nUser Profile:",
-        f"- Demographics: {demographics}",
-        f"- Preferences: {preferences}",
+        f"- Demographics and preferences: {demographics}",
+       # f"- Preferences: {preferences}",
         "\nCulturally Diverse Expert Responses:",
     ]
 

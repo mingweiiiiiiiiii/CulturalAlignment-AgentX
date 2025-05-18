@@ -1,26 +1,22 @@
 import numpy as np
 from sklearn.cluster import KMeans
 from typing import Dict, List, Any
-import ollama
 
 # Mocked classes (replace with your real imports)
 from node.cultural_expert_node import CulturalExpertManager
 from node.sen_agent_node import determine_cultural_sensitivity
+from node.embed_utils import embed_persona
 from utility.measure_time import measure_time
-
+import requests
 # === Embedding Function ===
-def embed_persona(persona: Dict[str, Any]) -> np.ndarray:
+"""def embed_persona(persona: Dict[str, Any]) -> np.ndarray:
     text = ", ".join(f"{k}: {v}" for k, v in persona.items())
-    response = ollama.embed(model="mxbai-embed-large", input=text)
-    embeddings = response.get("embeddings", [])
-
-    if not embeddings:
-        print(f"🔍 Text passed to embedding model:\n{text}")
-        print(f"⚠️ No embeddings returned for text: {text}")
-        return np.zeros(768)  # fallback: return zero vector of expected size
-
-    return np.array(embeddings[0])
-
+    response = requests.post("http://localhost:8000/embeddings/", json={"text": text})
+    if response.status_code != 200:
+        print(f"⚠️ Failed to get embedding: {response.text}")
+        return np.zeros(768)
+    embedding = response.json().get("embedding", [])
+    return np.array(embedding)"""
 
 # === Router Function ===
 @measure_time
@@ -33,17 +29,7 @@ def route_to_cultures(
     precomputed_centroids: np.ndarray = None,
 ) -> List[Dict[str, Any]]:
 
-    # Setup experts
-
     manager = CulturalExpertManager(state=state)
-
-    # Generate experts
-    expert_instances = manager.generate_expert_instances()
-    expert_list = list(expert_instances.keys())
-
-    # Sensitivity detection
-    sensitivity_info = determine_cultural_sensitivity(state)
-    state["question_meta"].update(sensitivity_info["question_meta"])
 
     # Prepare input
     q = state["question_meta"]["original"]
@@ -52,18 +38,8 @@ def route_to_cultures(
     sensitive_topics = state["question_meta"].get("sensitive_topics", [])
 
     # Step 1: Embed experts
-    dict_expert_embeddings = {}
-    dict_expert_prompt_text = {}
-
-    for expert_name in expert_list:
-        expert = expert_instances[expert_name]
-        generated_response = expert.generate_response(q)
-        dict_expert_embeddings[expert_name] = embed_persona(
-            {"response": generated_response}
-        )
-        dict_expert_prompt_text[expert_name] = generated_response
-
-    expert_embeddings = np.stack(list(dict_expert_embeddings.values()))
+    # Generate experts_list and expert_embeddings
+    expert_list, expert_embeddings = manager.get_all_persona_embeddings()
 
     # Step 2: Topic embedding
     if sensitive_topics:
@@ -106,14 +82,11 @@ def route_to_cultures(
     softmax_weights = np.exp(logits) / np.sum(np.exp(logits))
 
     # Step 6: Generate selected expert set
-    selected_experts = []
-    for i, idx in enumerate(top_indices):
-        culture = expert_list[idx]
-        weight = softmax_weights[i]
-        prompt_text = dict_expert_prompt_text[culture]  # ✅ Correct fetching prompt
-        selected_experts.append(
-            {"culture": culture, "weight": float(weight), "prompt": prompt_text}
-        )
+    selected_experts = [
+      {"culture": expert_list[i], "weight": float(softmax_weights[j])}
+      for j, i in enumerate(top_indices)
+    ]
+
     state["question_meta"]["relevant_cultures"] = [e["culture"] for e in selected_experts]
     state["activate_router"] = False
     return {
