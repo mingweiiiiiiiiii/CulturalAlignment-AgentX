@@ -13,37 +13,38 @@ def create_visualizations(csv_file_path):
     # Create viz directory if it doesn't exist
     os.makedirs("viz", exist_ok=True)
 
-    # Generate timestamp for unique filenames
+    # Generate timestamp for filenames
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # Load the CSV data
+    # Load data
     csv_data = pd.read_csv(csv_file_path)
     print("Loading data from:", csv_file_path)
     print(csv_data.head())
     print(csv_data.columns)
 
-    # Get average scores based on the type column
+    # Group by 'type' and compute averages
     average_scores = csv_data.groupby('type').mean(numeric_only=True)
     print(average_scores)
 
-    # Remove the id column if it exists
-    if 'id' in average_scores.columns:
-        average_scores = average_scores.drop(columns=['id'])
+    # Drop non-numeric or irrelevant columns
+    for col in ['id', 'timestamp']:
+        if col in average_scores.columns:
+            average_scores.drop(columns=[col], inplace=True)
 
-    # Set Seaborn styling
+    # Set seaborn aesthetics
     sns.set_context("talk")
     sns.set_style("whitegrid")
-    plt.rcParams['axes.titlesize'] = 18
-    plt.rcParams['axes.labelsize'] = 14
-    plt.rcParams['xtick.labelsize'] = 10
-    plt.rcParams['ytick.labelsize'] = 10
-    plt.rcParams['legend.fontsize'] = 10
+    plt.rcParams.update({
+        'axes.titlesize': 18,
+        'axes.labelsize': 14,
+        'xtick.labelsize': 10,
+        'ytick.labelsize': 10,
+        'legend.fontsize': 10
+    })
 
-    # Create individual vertical bar plots for each metric
+    # Individual metric bar charts
     metrics = average_scores.columns.tolist()
     num_metrics = len(metrics)
-
-    # Calculate subplot grid dimensions
     n_cols = 3 if num_metrics > 3 else num_metrics
     n_rows = (num_metrics + n_cols - 1) // n_cols
 
@@ -53,8 +54,9 @@ def create_visualizations(csv_file_path):
     for i, metric in enumerate(metrics):
         ax = axes[i]
         sns.barplot(x=average_scores.index, y=average_scores[metric],
-                    palette="Blues_d", ax=ax)
-        ax.set_title(f'{metric}')
+                    hue=average_scores.index, dodge=False,
+                    palette="Blues_d", ax=ax, legend=False)
+        ax.set_title(metric)
         ax.set_xlabel('Type')
         ax.set_ylabel('Value')
 
@@ -62,7 +64,6 @@ def create_visualizations(csv_file_path):
         for j, val in enumerate(average_scores[metric]):
             ax.text(j, val + (val * 0.02), f'{val:.2f}', ha='center', va='bottom', fontsize=9)
 
-    # Hide unused subplots
     for j in range(i + 1, len(axes)):
         axes[j].set_visible(False)
 
@@ -71,40 +72,44 @@ def create_visualizations(csv_file_path):
     plt.savefig(f"viz/individual_metrics_{timestamp}.png", dpi=300, bbox_inches='tight')
     plt.close()
 
-    # Transpose data for grouped metric comparison
-    transposed_data = average_scores.transpose()
-
-    # Melt into long format
-    melted_data = transposed_data.reset_index().melt(id_vars='index')
+    # === Log-scale grouped bar chart ===
+    transposed_data = average_scores.transpose().reset_index()
+    melted_data = pd.melt(transposed_data, id_vars='index')
     melted_data.columns = ['Metric', 'Type', 'Value']
-
-    # Replace invalid values for log scale
     melted_data['LogValue'] = melted_data['Value'].apply(
         lambda x: 0.01 if pd.isna(x) or x <= 0 else min(x, 1e6)
     )
 
-    # Grouped bar chart with log scale
     plt.figure(figsize=(16, 9))
-    ax = sns.barplot(data=melted_data, x='Metric', y='LogValue', hue='Type', log=True, palette='Set2')
+    ax = sns.barplot(data=melted_data, x='Metric', y='LogValue', hue='Type', palette='Set2')
+    ax.set_yscale("log")
 
-    # Annotate bars with original (non-log) values
+    # Annotate each bar with its height (original value)
     for container in ax.containers:
-        ax.bar_label(container, fmt='%.2f', label_type='edge', fontsize=8, rotation=90, padding=2)
+        if not container:
+            continue
+        for bar in container:
+            height = bar.get_height()
+            if height > 0:
+                ax.annotate(f'{height:.2f}',
+                            xy=(bar.get_x() + bar.get_width() / 2, height),
+                            xytext=(0, 3),
+                            textcoords="offset points",
+                            ha='center', va='bottom',
+                            fontsize=8, rotation=90)
 
     ax.set_title('Comparison of Baseline vs Model Across All Metrics (Log Scale)', fontsize=18, pad=15)
     ax.set_xlabel('Metrics', fontsize=14)
     ax.set_ylabel('Value (Log Scale)', fontsize=14)
     ax.tick_params(axis='x', rotation=45)
-
-    # Improve legend placement
     plt.legend(title='Type', title_fontsize=12, fontsize=10, loc='upper right', bbox_to_anchor=(1.15, 1))
-
     plt.tight_layout()
     plt.savefig(f"viz/comparison_metrics_log_{timestamp}.png", dpi=300, bbox_inches='tight')
     plt.close()
 
     print(f"All visualizations saved to the 'viz' directory with timestamp {timestamp}")
-    
+
+
 def main():
     # Set up command line argument parsing
     parser = argparse.ArgumentParser(
