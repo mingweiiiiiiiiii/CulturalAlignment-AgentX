@@ -43,15 +43,9 @@ def evaluate_response(graph_state: GraphState) -> dict:
     expert_responses = graph_state.get(
         "response_state", {}).get("expert_responses", [])
     final_response = graph_state.get("response_state", {}).get("final", "")
-    relevant_cultures = graph_state.get(
-        "question_meta", {}).get("relevant_cultures", [])
-    sensitive_topics = graph_state.get(
-        "question_meta", {}).get("sensitive_topics", [])
-    question = graph_state.get("question_meta", {}).get("original", "")
-    # Add these to visualize responses, free feel to comment it out
-    # print(f"question: {question}")
-    # print(f"Final response: {final_response}")
-    # print(f"Evaluating {len(expert_responses)} expert responses...")
+    relevant_cultures = graph_state.get("question_meta", {}).get("relevant_cultures", [])
+    sensitive_topics = graph_state.get("question_meta", {}).get("sensitive_topics", [])
+    
     print(f"Relevant cultures: {relevant_cultures}")
     # print(f"Sensitive topics: {sensitive_topics}")
     node_times = graph_state.get("node_times", {})
@@ -59,15 +53,10 @@ def evaluate_response(graph_state: GraphState) -> dict:
     total_node_latency = sum(node_times.values())
     # Metrics base
     response_lengths = [len(r.get("response", "")) for r in expert_responses]
-    response_cultures = [r.get("culture", "")
-                         for r in expert_responses if r.get("culture")]
-    print(
-        f"Response cultures: {response_cultures} len: {len(response_cultures)}")
+    response_cultures = [r.get("culture", "") for r in expert_responses if r.get("culture")]
     aligned = [c for c in response_cultures if c in relevant_cultures]
     alignment_distribution = Counter(response_cultures)
-    print(f"Alignment distribution: {alignment_distribution}")
-    cultural_alignment_variance = float(np.var(
-        [alignment_distribution[c] for c in relevant_cultures])) if relevant_cultures else 0.0
+    cultural_alignment_variance = float(np.var([alignment_distribution[c] for c in relevant_cultures])) if relevant_cultures else 0.0
 
     sensitive_hits = sum(
         any(t.lower() in r.get("response", "").lower()
@@ -152,11 +141,11 @@ Output only the JSON object with the six keys. No prose.
             generate_response = judgeModel.generate(prompt)
         elif isinstance(judgeModel, llm_clients.LambdaAPIClient):
             generate_response = judgeModel.get_completion(
-                prompt,
-                temperature=0,
-                max_tokens=200
-            )
-            print("RAW LLM OUTPUT ▶", repr(generate_response))
+            prompt,
+            temperature=0,
+            max_tokens=200
+        )
+            print("Baseline LLM OUTPUT ▶", repr(generate_response))
         else:
             raise RuntimeError(
                 "LLM client does not have a supported generate method")
@@ -220,8 +209,6 @@ def compare_with_baseline(n=10):
             "current_state": "planner",
         }
         print(f"\n\n--- Model {i} ---")
-        # print("Graph nodes:", graph.get_graph().nodes)
-        # print("\nInvoking graph with state:", state)
         model_start = time.perf_counter()
         result = graph.invoke(state, config={
             "recursion_limit": 200,
@@ -230,9 +217,6 @@ def compare_with_baseline(n=10):
         })
         model_end = time.perf_counter()
         model_latency = model_end - model_start
-        print("API Calls per Node:")
-        for node, count in result.get("api_calls", {}).items():
-            print(f"  {node}: {count} calls")
 
         model_metrics = evaluate_response(result)
         model_metrics.update(
@@ -249,7 +233,7 @@ def compare_with_baseline(n=10):
         # --- Baseline ---
         baseline_start = time.perf_counter()
         essay = generate_baseline_essay(profiles, merged_question)
-        # print(f"Baseline LLM response {i}: {essay}")
+        
         baseline_end = time.perf_counter()
         baseline_latency = baseline_end - baseline_start
         baseline_metrics = evaluate_baseline_response(essay)
@@ -361,7 +345,7 @@ def simplify_attribute(field_name: str, text: str) -> str:
         "Single-word label:"
     )
     try:
-        return judgeModel.generate(prompt).strip().split()[0].lower()
+        return judgeModel.get_completion(prompt).strip().split()[0].lower()
     except:
         return "unknown"
 
@@ -369,7 +353,7 @@ def simplify_attribute(field_name: str, text: str) -> str:
 def convert_age_to_bucket(age_str: str) -> str:
     prompt = f"Convert age to bucket (e.g., 'young adult', 'senior'): {age_str}"
     try:
-        return judgeModel.generate(prompt).strip().split()[0].lower()
+        return judgeModel.get_completion(prompt).strip().split()[0].lower()
     except:
         return "unknown"
 
@@ -377,7 +361,7 @@ def convert_age_to_bucket(age_str: str) -> str:
 def convert_income_to_range(income_str: str) -> str:
     prompt = f"Convert income '{income_str}' to category (e.g., 'low', 'medium', 'high'):"
     try:
-        return judgeModel.generate(prompt).strip().split()[0].lower()
+        return judgeModel.get_completion(prompt).strip().split()[0].lower()
     except:
         return "unknown"
 
@@ -385,7 +369,7 @@ def convert_income_to_range(income_str: str) -> str:
 def simplify_education_level(text: str) -> str:
     prompt = f"Categorize education: {text}"
     try:
-        return judgeModel.generate(prompt).strip().split()[0].lower()
+        return judgeModel.get_completion(prompt).strip().split()[0].lower()
     except:
         return "unknown"
 
@@ -398,7 +382,7 @@ def infer_boolean_from_text(field: str, text: str) -> bool:
         f"Return only True or False:"
     )
     try:
-        result = judgeModel.generate(prompt).strip().lower()
+        result = judgeModel.get_completion(prompt).strip().lower()
         return "true" in result
     except:
         return pd.NA
@@ -497,7 +481,7 @@ def preprocess_user_profiles(df: pd.DataFrame) -> pd.DataFrame:
                 f"Example value: {sample_val}\n"
                 f"Return only one word: 'binary' or 'categorical'."
             )
-            decision = judgeModel.generate(prompt).strip().lower()
+            decision = judgeModel.get_completion(prompt).strip().lower()
 
             if decision == "binary":
                 df[col + "_bool"] = df[col].apply(lambda x: infer_boolean_from_text(
