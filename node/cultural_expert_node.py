@@ -1,8 +1,10 @@
 from abc import ABC
-from typing import Dict
+from typing import Dict, List, Tuple, Any
 from google import genai
 import unittest
 from llmagentsetting import llm_clients
+import numpy as np
+from node.embed_utils import embed_persona
 
 # === LLM Model Wrapper ===
 # class LLMModel:
@@ -49,10 +51,12 @@ class CulturalExpert(ABC):
 class CulturalExpertManager:
     def __init__(self, state: Dict = None):
         self.state = state
-        self.expert_instances = {}
+        self.expert_instances: Dict[str, CulturalExpert] = {}
+        self._persona_embeddings: Tuple[List[str], np.ndarray] = None  # Cache for persona embeddings
 
     def generate_expert_instances(self):
-        countries = ["United States", "China", "India", "Japan", "Turkey", "Vietnam"]
+        # 20 countries
+        countries = ["United States", "China", "India", "Japan", "Turkey", "Vietnam"]#, "Russia", "Brazil", "South Africa", "Germany", "France", "Italy", "Spain", "Mexico", "Egypt", "Kenya", "Nigeria", "Indonesia", "Philippines", "Thailand"]
         for country in countries:
             self.expert_instances[country] = CulturalExpert(
                 culture_name=f"{country} Culture",
@@ -76,7 +80,46 @@ class CulturalExpertManager:
         else:
             self.state = {"question_meta": {"original": question}}
         return expert(self.state)
+    
+    def get_persona_prompt(self, country_name: str) -> str:
+        """
+        Return the static soft‑prompt that describes this expert's cultural persona.
+        This prompt will be embedded once at startup to produce E_j.
+        """
+        demographic = self.state.get("user_profile", {}) # since seperate demographic info is not provided
+        # You can enrich this template however you like.
+        return (
+            f"You are a knowledgeable advisor from {country_name}. "
+            f"Take into account the user's demographics: {demographic}. "
+            f"Provide culturally informed guidance reflecting {country_name} values and norms."
+        )
+    def get_all_persona_embeddings(self) -> Tuple[List[str], np.ndarray]:
+        """
+        Returns a tuple (expert_list, embeddings_matrix),
+        where embeddings_matrix[i] corresponds to expert_list[i].
+        Caches on first call.
+        """
+        # Only build once
+        if self._persona_embeddings is None:
+            # Ensure we have instances so get_persona_prompt works
+            names = list(self.generate_expert_instances().keys())
 
+            # Build persona prompt texts
+            texts = {n: self.get_persona_prompt(n) for n in names}
+
+            # Embed each persona prompt
+            embs = {
+                n: embed_persona({"persona": texts[n]})
+                for n in names
+            }
+
+            # Stack into (N, d) array
+            matrix = np.stack([embs[n] for n in names])
+
+            # Cache both ordering and matrix
+            self._persona_embeddings = (names, matrix)
+
+        return self._persona_embeddings
 
 # === Example Usage ===
 if __name__ == "__main__":
