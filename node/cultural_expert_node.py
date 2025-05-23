@@ -56,7 +56,7 @@ class CulturalExpertManager:
 
     def generate_expert_instances(self):
         # 20 countries
-        countries = ["United States", "China", "India", "Japan", "Turkey", "Vietnam"]#, "Russia", "Brazil", "South Africa", "Germany", "France", "Italy", "Spain", "Mexico", "Egypt", "Kenya", "Nigeria", "Indonesia", "Philippines", "Thailand"]
+        countries = ["United States", "China", "India", "Japan", "Turkey", "Vietnam", "Russia", "Brazil", "South Africa", "Germany", "France", "Italy", "Spain", "Mexico", "Egypt", "Kenya", "Nigeria", "Indonesia", "Philippines", "Thailand"]
         for country in countries:
             self.expert_instances[country] = CulturalExpert(
                 culture_name=f"{country} Culture",
