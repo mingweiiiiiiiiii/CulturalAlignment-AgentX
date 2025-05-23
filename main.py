@@ -145,7 +145,6 @@ Output only the JSON object with the six keys. No prose.
             temperature=0,
             max_tokens=200
         )
-            print("Baseline LLM OUTPUT ▶", repr(generate_response))
         else:
             raise RuntimeError(
                 "LLM client does not have a supported generate method")
@@ -179,70 +178,71 @@ def compare_with_baseline(n=10):
     model_records, baseline_records = [], []
 
     profiles = sampler.sample_profiles(n)
-    for i in range(n):
-        question, options = sampler.sample_question()
-        merged_question = f"{question}\n\nOptions:\n" + \
-            "\n".join([f"{chr(65 + j)}. {opt}" for j,
-                      opt in enumerate(options)])
+    with open("run.log", "a") as log:
+        for i in range(n):
+            question, options = sampler.sample_question()
+            merged_question = f"{question}\n\nOptions:\n" + \
+                "\n".join([f"{chr(65 + j)}. {opt}" for j,
+                        opt in enumerate(options)])
 
-        print(f"Merged question: {merged_question}")
+            print(f"Merged question: {merged_question}", file=log)
 
-        # --- Model system ---
-        state: GraphState = {
-            "user_profile": profiles[i],
-            "question_meta": {
-                "original": merged_question,
-                "options": options,
-                "sensitive_topics": [],
-                "relevant_cultures": [],
-            },
-            "response_state": {
-                "expert_responses": [],
-            },
-            "full_history": [],
-            "planner_counter": 0,
-            "activate_sensitivity_check": True,
-            "activate_extract_topics": True,
-            "activate_router": False,
-            "activate_judge": False,
-            "activate_compose": False,
-            "current_state": "planner",
-        }
-        print(f"\n\n--- Model {i} ---")
-        model_start = time.perf_counter()
-        result = graph.invoke(state, config={
-            "recursion_limit": 200,
-            "configurable": {"thread_id": str(i)},
-            "verbose": True,
-        })
-        model_end = time.perf_counter()
-        model_latency = model_end - model_start
+            # --- Model system ---
+            state: GraphState = {
+                "user_profile": profiles[i],
+                "question_meta": {
+                    "original": merged_question,
+                    "options": options,
+                    "sensitive_topics": [],
+                    "relevant_cultures": [],
+                },
+                "response_state": {
+                    "expert_responses": [],
+                },
+                "full_history": [],
+                "planner_counter": 0,
+                "activate_sensitivity_check": True,
+                "activate_extract_topics": True,
+                "activate_router": False,
+                "activate_judge": False,
+                "activate_compose": False,
+                "current_state": "planner",
+            }
+            print(f"\n\n--- Model {i} ---", file=log)
+            model_start = time.perf_counter()
+            result = graph.invoke(state, config={
+                "recursion_limit": 200,
+                "configurable": {"thread_id": str(i)},
+                "verbose": True,
+            })
+            model_end = time.perf_counter()
+            model_latency = model_end - model_start
 
-        model_metrics = evaluate_response(result)
-        model_metrics.update(
-            {"type": "model", "id": i, "latency_seconds": model_latency})
-        model_records.append(model_metrics)
-        print(f"Model metrics (Latency: {model_latency:.3f}s):", model_metrics)
+            model_metrics = evaluate_response(result)
+            model_metrics.update(
+                {"type": "model", "id": i, "latency_seconds": model_latency})
+            model_records.append(model_metrics)
+            print(f"Model metrics (Latency: {model_latency:.3f}s):", model_metrics, file=log)
 
-        # ✅ Add this line to collect user profile + flattened metrics
-        paired_profile_metrics.append({
-            **profiles[i],
-            **model_metrics
-        })
+            # ✅ Add this line to collect user profile + flattened metrics
+            paired_profile_metrics.append({
+                **profiles[i],
+                **model_metrics
+            })
 
-        # --- Baseline ---
-        baseline_start = time.perf_counter()
-        essay = generate_baseline_essay(profiles, merged_question)
-        
-        baseline_end = time.perf_counter()
-        baseline_latency = baseline_end - baseline_start
-        baseline_metrics = evaluate_baseline_response(essay)
-        baseline_metrics.update(
-            {"type": "baseline", "id": i, "latency_seconds": baseline_latency})
-        baseline_records.append(baseline_metrics)
-        print(
-            f"Baseline metrics (Latency: {baseline_latency:.3f}s):", baseline_metrics)
-
+            # --- Baseline ---
+            baseline_start = time.perf_counter()
+            essay = generate_baseline_essay(profiles, merged_question)
+            
+            baseline_end = time.perf_counter()
+            baseline_latency = baseline_end - baseline_start
+            baseline_metrics = evaluate_baseline_response(essay)
+            baseline_metrics.update(
+                {"type": "baseline", "id": i, "latency_seconds": baseline_latency})
+            baseline_records.append(baseline_metrics)
+            print(
+                f"Baseline metrics (Latency: {baseline_latency:.3f}s):", baseline_metrics, file=log)
+            print("\n\n", file=log)
     return pd.DataFrame(model_records + baseline_records)
 
 
@@ -694,7 +694,7 @@ def save_paired_profiles_to_json(data, filename="paired_profiles_metrics.json"):
 
 
 if __name__ == "__main__":
-    df_results = compare_with_baseline(n=10)  # Adjust n as needed
+    df_results = compare_with_baseline(n=25)  # Adjust n as needed
     path = save_markdown_table(df_results)
     save_results_to_csv(df_results)
     print(f"\n✅ Markdown saved to: {path}")
