@@ -72,7 +72,25 @@ To set up the project, ensure you have the following packages installed:
     uv pip install -r requirements.txt
     ```
 
- ## Running the Project
+## Environment Configuration
+
+1. Copy the `.env.example` file to `.env`:
+
+   ```pwsh
+   Copy-Item .env.example .env
+   ```
+
+2. Edit the `.env` file and set the required variables:
+   - `OLLAMA_HOST`: URL of the Ollama service (e.g., `http://ollama-gpu:11434`)
+   - Optional API keys:
+     - `GEMINI_API_KEY`
+     - `GROQ_API_KEY`
+     - `HF_API_KEY`
+     - `LAMBDA_API_KEY`
+
+3. Save the `.env` file. Your environment is now configured for local development.
+
+## Running the Project
 
 ### Prerequisite
 
@@ -87,6 +105,54 @@ To set up the project, ensure you have the following packages installed:
  ```bash
  uv run python main.py
  ```
+
+## Quickstart
+
+### Local development
+
+**Prerequisites**
+
+- `ollama` CLI installed locally.
+
+**Steps**
+
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt  # or npm install
+   ```
+2. Set the Ollama host environment variable:
+   ```powershell
+   $env:OLLAMA_HOST = "localhost:11434"
+   ```
+3. Run the application:
+   ```bash
+   python main.py
+   ```
+
+### Dockerized GPU
+
+**Prerequisites**
+
+- Docker
+- Docker Compose
+- GPU drivers
+
+**Steps**
+
+1. Create the environment file:
+   ```bash
+   cp .env.example .env
+   ```
+2. Start the containers:
+   ```bash
+   ./run_docker.sh
+   ```
+3. Check the Ollama service health:
+   ```bash
+   docker-compose exec ollama-gpu curl http://localhost:11434/api/version
+   ```
+
+For more details, see the [Ollama Docker Reference](corpora/Ollama_docker_ref.md).
 
 ## Project Structure
 The project is organized as follows:

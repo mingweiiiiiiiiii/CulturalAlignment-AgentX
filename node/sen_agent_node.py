@@ -1,9 +1,30 @@
-from typing import Dict
-
+from typing import Dict, Any
 import numpy as np
 import ollama
+import config
 from sklearn.metrics.pairwise import cosine_similarity
 from utility.measure_time import measure_time
+
+# Initialize ollama client with host
+client = ollama.Client(host=config.OLLAMA_HOST)
+
+# Centralized run model name and options for text generation
+RUN_MODEL_NAME = "phi4"
+RUN_OPTIONS = {"num_ctx": 16384}
+
+def generate_text(prompt: str) -> str:
+    """Generate text for the given prompt using Ollama run API."""
+    response = client.generate(model=RUN_MODEL_NAME, prompt=prompt, options=RUN_OPTIONS)
+    # The response may include streaming chunks; ensure full text
+    if isinstance(response, dict) and "response" in response:
+        return response.get("response", "")
+    # If response is an object with attributes
+    if hasattr(response, 'response'):
+        return response.response
+    # If streaming or list of chunks, concatenate
+    if isinstance(response, list):
+        return "".join(chunk.get("response", "") for chunk in response)
+    return str(response)
 
 # === Reference bank of example questions with sensitivity levels ===
 reference_bank = {
@@ -62,7 +83,7 @@ sensitivity_scale = {"low": 3, "medium": 6, "high": 9}
 try:
     reference_embeddings = {}
     for q in reference_bank:
-        emb = ollama.embed(model="mxbai-embed-large", input=q)["embeddings"]
+        emb = client.embed(model="mxbai-embed-large", input=q)["embeddings"]
         reference_embeddings[q] = np.array(emb).flatten()
 
     reference_matrix = np.stack(list(reference_embeddings.values()))
@@ -75,7 +96,7 @@ except Exception as e:
 def determine_cultural_sensitivity(state) -> Dict:
     question = state["question_meta"]["original"]
     question_embedding = np.array(
-        ollama.embed(model="mxbai-embed-large", input=question)["embeddings"]
+        client.embed(model="mxbai-embed-large", input=question)["embeddings"]
     ).flatten()
 
     # Calculate cosine similarity between the input and all references

@@ -42,6 +42,16 @@ To run tests that match a specific pattern:
 pytest -k "test_persona"  # Runs all tests with "test_persona" in the name
 ```
 
+### Run Docker integration tests
+To run the full Docker stack integration tests:
+```bash
+# Requires Docker and docker-compose to be installed
+pytest tests/test_docker_integration.py
+
+# To skip Docker tests (e.g., in CI without Docker)
+SKIP_DOCKER_TESTS=1 pytest
+```
+
 ## Test Coverage
 To generate a test coverage report:
 
@@ -55,6 +65,8 @@ pytest --cov=../ --cov-report=term-missing
 - `test_inputData.py`: Tests for profile and question sampling functionality
 - `test_nodes.py`: Tests for cultural expert nodes and routing logic
 - `test_graph.py`: Tests for the cultural graph workflow
+- `test_api_endpoints.py`: Tests for REST API endpoints (mocked)
+- `test_docker_integration.py`: Integration tests for full Docker stack
 
 ## Writing New Tests
 When adding new tests:

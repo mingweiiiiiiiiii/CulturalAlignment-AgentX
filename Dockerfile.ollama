@@ -1,0 +1,9 @@
+# Dockerfile.ollama
+# Multi-stage build to pull Ollama models at build time
+
+FROM ollama/ollama:latest AS builder
+RUN ollama pull phi4 && ollama pull mxbai-embed-large
+
+FROM ollama/ollama:latest
+COPY --from=builder /root/.ollama /root/.ollama
+ENTRYPOINT ["ollama", "serve"]

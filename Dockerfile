@@ -1,8 +1,12 @@
 # Use the official Python image from the Docker Hub
-FROM python:3.12.7-slim
+FROM python:3.12-slim
 
 # Set the working directory in the container
 WORKDIR /app
+
+# Build arg for external Ollama service host
+ARG OLLAMA_HOST=ollama-gpu:11434
+ENV OLLAMA_HOST=${OLLAMA_HOST}
 
 # Copy the requirements file to the container
 COPY requirements.txt .
@@ -10,17 +14,13 @@ COPY requirements.txt .
 # Install the required packages
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Ollama
-RUN curl -sSL https://ollama.com/download.sh | sh
-
-# Pull the mxbai-embed-large model
-RUN ollama pull mxbai-embed-large
-
 # Copy the rest of the project files to the container
 COPY . .
 
-# Command to run the main script
-CMD ["python", "main.py"]
+# Ollama service provided by external container 'ollama-gpu'
+
+# Serve API endpoints via Uvicorn
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Set the image name
 LABEL image_name="cultural-alignment-server"

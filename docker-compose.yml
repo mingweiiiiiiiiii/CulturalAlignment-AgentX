@@ -11,16 +11,26 @@ services:
       - ./logs:/app/logs                # Save logs
     environment:
       PYTHONUNBUFFERED: 1               # Force real-time logging
-    entrypoint: >
-      bash -c "
-        echo '🧹 Cleaning old outputs...' &&
-        rm -f /app/outputs/evaluation_chart.png /app/logs/run.log &&
-        echo '🚀 Installing requirements...' &&
-        pip install -r requirements.txt && \
-        echo '🚀 Installing ollama...' &&
-        pip install ollama && \
-        echo '🚀 Pulling mxbai-embed-large...' &&
-        ollama pull mxbai-embed-large && \
-        echo '🚀 Starting system...' &&
-        python main.py | tee /app/logs/run.log
-      "
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+  ollama-gpu:
+    image: ollama/ollama:latest
+    container_name: ollama-gpu-container
+    gpus: all
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:11434/api/version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file:
+      - .env
+
+volumes:
+  ollama:
+    external: false

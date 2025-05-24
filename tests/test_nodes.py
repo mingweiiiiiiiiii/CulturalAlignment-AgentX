@@ -1,6 +1,9 @@
 import pytest
 import numpy as np
-from nodes import (
+import subprocess  # type: ignore
+import time  # type: ignore
+import requests  # type: ignore
+from nodes import (  # type: ignore
     get_text_embedding,
     USExpert,
     ChineseExpert,
@@ -238,3 +241,60 @@ def test_compose_final_response_variations():
     assert "response_state" in result_equal
     assert "final" in result_equal["response_state"]
     assert result_equal["response_state"]["final"] != result["response_state"]["final"]
+
+
+# Add imports at top for integration testing
+import subprocess
+import time
+import requests
+
+
+@pytest.fixture(scope="session", autouse=True)
+def docker_compose_setup():
+    # Spin up Docker Compose stack for Ollama and application
+    subprocess.run(["docker-compose", "up", "-d"], check=True)
+    # Wait for Ollama health
+    for _ in range(30):
+        try:
+            r = requests.get("http://localhost:11434/api/version")
+            if r.status_code == 200 and 'version' in r.text:
+                break
+        except Exception:
+            pass
+        time.sleep(2)
+    else:
+        pytest.skip("Ollama service not available")
+    yield
+    # Tear down containers
+    subprocess.run(["docker-compose", "down"], check=True)
+
+
+def test_embed_endpoint(docker_compose_setup):
+    # Test /api/embed endpoint
+    payload = {"model": "mxbai-embed-large", "input": ["test sentence"]}
+    response = requests.post("http://localhost:8000/api/embed", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "embeddings" in data
+    embeddings = data["embeddings"]
+    assert isinstance(embeddings, list)
+    assert len(embeddings) == 1
+    assert len(embeddings[0]) == 768
+    assert all(isinstance(x, float) for x in embeddings[0])
+
+
+def test_generate_endpoint(docker_compose_setup):
+    # Test /api/generate endpoint
+    payload = {"model": "phi4", "prompt": "Hello"}
+    response = requests.post("http://localhost:8000/api/generate", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "response" in data
+    assert isinstance(data["response"], str)
+    assert len(data["response"]) > 0
+
+
+def test_ollama_ready_log(docker_compose_setup):
+    # Optional: check for startup log in Ollama container logs
+    logs = subprocess.check_output(["docker", "logs", "ollama-gpu"], shell=False).decode()
+    assert "Ollama ready" in logs
