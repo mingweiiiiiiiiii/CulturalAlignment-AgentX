@@ -1,13 +1,13 @@
 Correlation Analysis Summary
 ==================================================
 
-Total samples analyzed: 10
+Total samples analyzed: 400
 Metrics analyzed: avg_response_length, response_completeness, cultural_alignment_score, diversity_entropy, sensitivity_coverage, sensitive_topic_mention_rate, num_expert_responses, num_full_responses, num_brief_responses
 
 Key Findings:
 ------------------------------
-Average sensitivity score: 5.70/10
-Sensitive questions: 10/10
-Average experts consulted: 3.5
-Average full responses: 3.5
-Average brief responses: 1.5
+Average sensitivity score: 4.59/10
+Sensitive questions: 379/400
+Average experts consulted: 3.4
+Average full responses: 3.4
+Average brief responses: 1.3
