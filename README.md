@@ -1,14 +1,17 @@
 # Cultural Alignment Project
 
 ## Overview
-The Cultural Alignment Project is built to be a culturally-aware multi-agent dialogue pipeline built with LangGraph. The system analyzes cultural sensitivities and generates responses that reflect diverse cultural perspectives, demonstrating **69%+ improvement** in cultural alignment over baseline approaches.
+The Cultural Alignment Project is a **production-ready, culturally-aware multi-agent dialogue system** built with LangGraph. The system analyzes cultural sensitivities and generates responses that reflect diverse cultural perspectives, demonstrating **69%+ improvement** in cultural alignment over baseline approaches.
+
+After comprehensive cleanup and integration, the system now features a **unified production architecture** where `main.py` incorporates all superior cultural alignment methods, providing both interactive dialogue capabilities and comprehensive validation features.
 
 ### **Key Achievements**
-- **Clean Architecture**: No monkey-patching required - fully modular design
-- **Proven Performance**: 69%+ better cultural alignment than baseline systems
-- **Comprehensive Validation**: 10+ cycle testing with detailed metrics and analysis
-- **Docker-Ready**: Complete containerized environment with GPU support
-- **Production-Grade**: Robust error handling, logging, and monitoring capabilities
+- **🏗️ Unified Production System**: Single entry point (`main.py`) with superior cultural alignment methods
+- **🧠 Smart 20-Culture Pool**: Intelligent expert selection with relevance-based scoring
+- **📈 Proven Performance**: 69%+ better cultural alignment than baseline systems
+- **🔧 Clean Architecture**: No monkey-patching anywhere - fully modular design
+- **🐳 Docker-Ready**: Complete containerized environment with GPU support
+- **🎯 Production-Grade**: Interactive interface, comprehensive validation, and robust error handling
 
 ## Purpose and Significance
 
@@ -22,38 +25,55 @@ The Cultural Alignment Project aims to address this gap by:
 -   **Advancing Research:** Contributing to the field of culturally-aware AI by exploring novel methods for integrating cultural knowledge into language models and agentic systems.
 -   **Potential Applications:** This research can pave the way for applications in global customer service, international diplomacy, multicultural education, and content generation for diverse audiences.
 
-## Methodology
+## System Architecture
 
-The project employs a multi-agent dialogue pipeline built with LangGraph. This framework allows for a structured yet flexible interaction between specialized agents, each contributing to the cultural alignment process.
+The Cultural Alignment Project features a **unified production architecture** with two main components:
 
-### Cultural Knowledge Integration
+### **🌍 main.py - Interactive Cultural Dialogue System**
+The primary entry point incorporating all superior cultural alignment methods:
+- **Interactive Interface**: User-friendly menu system for single question analysis
+- **Batch Validation**: Small (5 tests) and full (20 tests) validation modes
+- **Superior Methods**: Integrated `calculate_meaningful_alignment()` with 69%+ improvement
+- **Smart Graph**: Uses `create_smart_cultural_graph()` with 20-culture pool
+- **Clean Architecture**: Local Ollama client, no monkey-patching
 
--   **World Value Survey (WVS):** Utilizes [WVS questions](https://www.worldvaluessurvey.org/wvs.jsp) to model and understand different cultural dimensions and values. This data helps in grounding the AI's understanding of cultural perspectives.
--   **Persona Data:** Incorporates diverse persona profiles in [SynthLabAI's dataset](https://huggingface.co/datasets/SynthLabsAI/PERSONA) representing individuals with varied cultural backgrounds and characteristics. These personas help simulate and test the system's ability to adapt to different cultural contexts.
+### **📊 cultural_alignment_validator.py - Dedicated Validation**
+Specialized script for comprehensive system validation and performance testing:
+- **Statistical Analysis**: Correlation studies and performance metrics
+- **Professional Reporting**: CSV reports, JSON data, visualization outputs
+- **Model vs Baseline**: Direct comparison demonstrating improvements
+- **Development Testing**: Specialized validation workflows
 
-### Key Technical Components & Process
+### **Cultural Knowledge Integration**
 
-#### **Clean Architecture Design**
-The system employs a modular, clean architecture without monkey-patching:
+-   **World Value Survey (WVS):** Utilizes [WVS questions](https://www.worldvaluessurvey.org/wvs.jsp) to model and understand different cultural dimensions and values
+-   **Persona Data:** Incorporates diverse persona profiles from [SynthLabAI's dataset](https://huggingface.co/datasets/SynthLabsAI/PERSONA) representing varied cultural backgrounds
+-   **Smart Cultural Pool**: 20+ diverse cultures with intelligent relevance-based selection
 
-1. **Cultural Sensitivity Analysis**: Automatically detects culturally sensitive topics using advanced LLM analysis
-2. **Smart Expert Selection**: Dynamically selects 2-4 most relevant cultural experts from a pool of 20+ cultures
-3. **Intelligent Response Generation**: Generates full responses for highly relevant cultures, brief responses for others
-4. **Cultural Alignment Scoring**: Measures how well responses align with user's cultural context
+### **Superior Cultural Alignment Process**
+
+#### **🧠 Smart Architecture Design**
+The system employs a **clean, unified architecture** with superior methods:
+
+1. **🔍 Cultural Sensitivity Analysis**: Automatically detects culturally sensitive topics using advanced LLM analysis
+2. **🎯 Smart Expert Selection**: Dynamically selects 2-4 most relevant cultural experts from 20-culture pool
+3. **💬 Intelligent Response Generation**: Full responses for highly relevant cultures, brief responses for others
+4. **📊 Superior Alignment Scoring**: Uses `calculate_meaningful_alignment()` method (69%+ improvement)
 
 ![graph](img/graph.png)
 
-#### **Technical Implementation**
-- **Embedding Models**: Uses `mxbai-embed-large` via Ollama for semantic similarity and cultural relevance
-- **LangGraph Pipeline**: Structured multi-agent workflow with conditional routing
-- **Smart Cultural Pool**: 20+ diverse cultures with intelligent selection algorithms
-- **Validation Framework**: Comprehensive testing with model vs baseline comparison
+#### **🔧 Technical Implementation**
+- **Embedding Models**: `mxbai-embed-large` via Ollama for semantic similarity and cultural relevance
+- **Smart Graph Pipeline**: `create_smart_cultural_graph()` with conditional routing and expert selection
+- **Local LLM Client**: Ollama-based architecture for reliable, local operation
+- **Meaningful Alignment**: Superior calculation method vs. simple ratio approaches
+- **Comprehensive Validation**: Integrated testing with statistical analysis and reporting
 
 ## Installation & Setup
 
-### **Recommended: Docker Setup (GPU-Enabled)**
+### **🐳 Recommended: Docker Setup (GPU-Enabled)**
 
-The easiest way to run the cultural alignment system is using our pre-configured Docker environment:
+The easiest way to run the **unified cultural alignment system** is using our pre-configured Docker environment:
 
 1. **Prerequisites:**
    - Docker and Docker Compose
@@ -62,8 +82,8 @@ The easiest way to run the cultural alignment system is using our pre-configured
 2. **Quick Start:**
    ```bash
    # Clone the repository
-   git clone <repository-url>
-   cd cultural-alignment-project
+   git clone https://github.com/mingweiiiiiiiiii/CulturalAlignment-AgentX.git
+   cd CulturalAlignment-AgentX
 
    # Create environment file
    cp .env.example .env
@@ -77,11 +97,11 @@ The easiest way to run the cultural alignment system is using our pre-configured
    # Check Ollama service
    docker-compose exec ollama-gpu curl http://localhost:11434/api/version
 
-   # Test the cultural alignment system
+   # Test the unified cultural alignment system
    docker exec -it cultural-agent-container python main.py
    ```
 
-### **Alternative: Local Python Setup**
+### **💻 Alternative: Local Python Setup**
 
 For local development without Docker:
 
@@ -99,10 +119,18 @@ For local development without Docker:
 
 3. **Setup Ollama locally:**
    ```bash
-   # Install Ollama CLI
+   # Install Ollama CLI (https://ollama.ai)
    # Pull required models
    ollama pull mxbai-embed-large
    ollama pull granite3-dense:8b
+   ollama pull phi3.5:3.8b
+   ```
+
+4. **Configure environment:**
+   ```bash
+   # Copy environment template
+   cp .env.example .env
+   # Edit .env to set OLLAMA_HOST=http://localhost:11434
    ```
 
 ## Environment Configuration
@@ -123,23 +151,36 @@ For local development without Docker:
 
 3. Save the `.env` file. Your environment is now configured for local development.
 
-## Running the Project
+## Usage
 
-### **Interactive Cultural Dialogue**
-Run the main interactive system:
+### **🌍 Interactive Cultural Dialogue System**
+
+The **unified main.py** provides multiple operation modes with superior cultural alignment methods:
 
 ```bash
-# Docker environment
+# Docker environment (recommended)
 docker exec -it cultural-agent-container python main.py
 
 # Local environment
 python main.py
 ```
 
-### **Validation & Testing**
+**Interactive Menu Options:**
+1. **Single Cultural Analysis** - Test individual questions with detailed cultural expert consultation
+2. **Small Baseline Comparison** - Quick validation with 5 test cases
+3. **Full Baseline Comparison** - Comprehensive validation with 20 test cases
+4. **Exit** - Clean system shutdown
+
+**Features:**
+- **🧠 Smart Expert Selection**: Automatically selects 2-4 most relevant cultural experts from 20-culture pool
+- **📊 Superior Alignment Scoring**: Uses `calculate_meaningful_alignment()` method (69%+ improvement)
+- **🔍 Sensitivity Detection**: Automatic cultural sensitivity analysis with threshold-based routing
+- **💬 Interactive Interface**: User-friendly menu system with detailed output and error handling
+
+### **📊 Dedicated Validation & Testing**
 
 #### **Comprehensive System Validation**
-Run the full validation suite to test cultural alignment performance:
+Run the specialized validation script for detailed performance analysis:
 
 ```bash
 # Docker environment (recommended)
@@ -150,95 +191,100 @@ python cultural_alignment_validator.py
 ```
 
 **Validation Outputs:**
-- `eval_results_*.csv` - Detailed test results with metrics
-- `paired_profiles_metrics_*.json` - User profiles and cultural alignment data
+- `eval_results_*.csv` - Detailed test results with superior alignment metrics
+- `paired_profiles_metrics_*.json` - User profiles with cultural alignment data
 - `correlation_analysis_*.zip` - Statistical analysis and visualizations
-- `model_vs_baseline_comparison_*.csv` - Performance comparison table
-- `run_final.log` - Execution logs
+- `model_vs_baseline_comparison_*.csv` - Performance comparison demonstrating 69%+ improvement
 
-#### **Quick Baseline Test**
-Test the baseline alignment scoring improvements:
-
-```bash
-docker exec -it cultural-agent-container python test_baseline_alignment_fix.py
-```
-
-### **Expected Performance**
-- **Cultural Alignment Score**: 0.25-0.50 (model) vs 0.10-0.20 (baseline)
-- **Expert Responses**: 2-4 experts per sensitive question
+### **🎯 Expected Performance**
+- **Cultural Alignment Score**: 0.25-0.50 (superior model) vs 0.10-0.20 (baseline)
+- **Expert Responses**: 2-4 experts per sensitive question (smart selection)
 - **Processing Time**: ~13-15 seconds per question (including expert consultation)
-- **Improvement**: **69%+ better cultural alignment** than baseline
+- **Improvement**: **69%+ better cultural alignment** than baseline methods
+- **Architecture**: Clean, no monkey-patching, local Ollama-based operation
 
-## System Architecture
+## Technical Architecture
 
-### **Core Components**
+### **🏗️ Unified Production System**
 
-#### **Cultural Alignment Validator** (`cultural_alignment_validator.py`)
-- **Purpose**: Comprehensive validation and evaluation of cultural alignment performance
-- **Features**: Model vs baseline comparison, statistical analysis, performance metrics
-- **Outputs**: CSV reports, JSON data, correlation analysis, comparison tables
+#### **🌍 main.py - Interactive Cultural Dialogue System**
+- **Purpose**: Primary entry point with integrated superior cultural alignment methods
+- **Features**: Interactive interface, batch validation, smart expert selection, superior alignment scoring
+- **Architecture**: Uses `create_smart_cultural_graph()`, `calculate_meaningful_alignment()`, clean Ollama client
+- **Modes**: Single analysis, small validation (5 tests), full validation (20 tests)
 
-#### **Smart Cultural Graph** (`mylanggraph/graph_smart.py`)
-- **Purpose**: Main workflow orchestration using LangGraph
-- **Features**: Conditional routing, expert selection, response composition
+#### **📊 cultural_alignment_validator.py - Specialized Validation**
+- **Purpose**: Dedicated validation and performance testing script
+- **Features**: Statistical analysis, correlation studies, professional reporting
+- **Outputs**: CSV reports, JSON data, visualizations, performance comparisons
+- **Use Case**: Development testing, comprehensive system validation
+
+#### **🧠 Smart Cultural Graph** (`mylanggraph/graph_smart.py`)
+- **Purpose**: Main workflow orchestration with superior methods
+- **Features**: 20-culture pool, conditional routing, intelligent expert selection
 - **Architecture**: Clean, modular design without monkey-patching
+- **Integration**: Used by both main.py and cultural_alignment_validator.py
 
-#### **Cultural Expert Nodes** (`node/cultural_expert_node_smart.py`)
-- **Purpose**: Generate culturally-aware responses from different perspectives
-- **Features**: Dynamic expert pool, relevance-based selection, response optimization
+#### **🎯 Cultural Expert Nodes** (`node/cultural_expert_node_smart.py`)
+- **Purpose**: Generate culturally-aware responses from diverse perspectives
+- **Features**: Smart relevance scoring, dynamic expert pool, response optimization
+- **Selection**: Automatically chooses 2-4 most relevant experts from 20-culture pool
 
-#### **Sensitivity Analysis** (`node/enhanced_sensitivity_node.py`)
-- **Purpose**: Detect culturally sensitive topics automatically
-- **Features**: Advanced LLM analysis, threshold-based routing, topic classification
+#### **🔍 Enhanced Sensitivity Analysis** (`node/enhanced_sensitivity_node.py`)
+- **Purpose**: Detect culturally sensitive topics with advanced LLM analysis
+- **Features**: Threshold-based routing, topic classification, sensitivity scoring
+- **Integration**: Seamlessly integrated into smart graph workflow
 
-### **Data Flow**
-1. **Input Processing**: User question and profile analysis
-2. **Sensitivity Detection**: Automatic cultural sensitivity scoring
-3. **Expert Selection**: Smart selection of 2-4 most relevant cultural experts
-4. **Response Generation**: Full responses for relevant cultures, brief for others
-5. **Final Composition**: Culturally-aligned response synthesis
-6. **Validation**: Comprehensive metrics and performance evaluation
+### **🔄 Superior Data Flow**
+1. **📝 Input Processing**: User question and profile analysis with cultural context derivation
+2. **🔍 Sensitivity Detection**: Automatic cultural sensitivity scoring with threshold-based routing
+3. **🎯 Smart Expert Selection**: Intelligent selection of 2-4 most relevant cultural experts from 20-culture pool
+4. **💬 Response Generation**: Full responses for highly relevant cultures, brief responses for others
+5. **🧮 Superior Alignment Scoring**: Uses `calculate_meaningful_alignment()` method (69%+ improvement)
+6. **📊 Final Composition**: Culturally-aligned response synthesis with comprehensive metrics
 
 ## Project Structure
 
-### **Core Files**
-- **`main.py`**: Interactive cultural dialogue system entry point
-- **`cultural_alignment_validator.py`**: Comprehensive validation and evaluation script
-- **`requirements.txt`**: Python dependencies
+### **🏗️ Core Production Files**
+- **`main.py`**: **Unified interactive cultural dialogue system** with superior methods
+- **`cultural_alignment_validator.py`**: Specialized validation and performance testing script
+- **`requirements.txt`**: Python dependencies (Ollama-based)
 - **`.env.example`**: Environment configuration template
-- **`docker-compose.yml`**: Docker container orchestration
+- **`docker-compose.yml`**: Docker container orchestration with GPU support
 - **`run_docker.sh`**: Docker startup script
 
-### **Key Directories**
+### **📁 Key Directories**
 
-#### **`mylanggraph/`** - LangGraph Workflow
-- `graph_smart.py`: Main cultural alignment workflow (clean architecture)
+#### **`mylanggraph/`** - Smart Graph Workflow
+- **`graph_smart.py`**: **Superior cultural alignment workflow** with 20-culture pool
 - `custom_types.py`: Type definitions and data structures
 - `types.py`: Additional type definitions
 
-#### **`node/`** - Pipeline Components
-- `cultural_expert_node_smart.py`: Smart cultural expert response generation
-- `enhanced_sensitivity_node.py`: Advanced cultural sensitivity detection
-- `router_optimized_v2.py`: Clean expert selection and routing
-- `compose_agent_smart.py`: Final response composition
+#### **`node/`** - Clean Architecture Components
+- **`cultural_expert_node_smart.py`**: **Smart cultural expert response generation** with relevance scoring
+- **`enhanced_sensitivity_node.py`**: **Advanced cultural sensitivity detection** with threshold routing
+- `router_optimized_v2.py`: Clean expert selection and routing logic
+- `compose_agent_smart.py`: Final response composition with superior methods
 
 #### **`utility/`** - Support Functions
 - `inputData.py`: Persona and question sampling from WVS data
 - `baseline.py`: Baseline response generation for comparison
-- `cultural_alignment.py`: Cultural alignment scoring and metrics
+- **`cultural_alignment.py`**: **Superior alignment scoring** with `calculate_meaningful_alignment()`
 
 #### **`llmagentsetting/`** - LLM Configuration
-- `ollama_client.py`: Ollama service integration
-- `llm_clients.py`: Multiple LLM provider support
+- **`ollama_client.py`**: **Clean Ollama service integration** (local, reliable)
+- `llm_clients.py`: Multiple LLM provider support (legacy compatibility)
 
 #### **`tests/`** - Testing Framework
-- Comprehensive test suite with Docker integration
+- **Official test suite** with Docker integration
 - Unit tests for all major components
-- Integration tests for full workflow
+- Integration tests for full workflow validation
+- **Essential test files**: 4 specialized tests for current system validation
 
-### **Data Sources**
+### **📊 Data Sources**
 - **`corpora/wvs_questions.json`**: World Values Survey questions for cultural analysis
-- **Persona Data**: SynthLabAI dataset for diverse cultural profiles
+- **Persona Data**: SynthLabAI dataset for diverse cultural profiles and testing
+- **Validation Outputs**: Current performance data demonstrating 69%+ improvement
 
 ## Performance & Validation Results
 
