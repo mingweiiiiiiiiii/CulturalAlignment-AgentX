@@ -12,6 +12,7 @@ from node.sensitivity_optimized import analyze_question_sensitivity
 from node.router_optimized_v2 import route_to_cultures_smart
 from node.compose_agent_smart import compose_final_response_smart
 from utility.measure_time import measure_time
+from utility.cultural_alignment import derive_relevant_cultures
 
 def create_smart_cultural_graph():
     """
@@ -26,10 +27,30 @@ def create_smart_cultural_graph():
     
     # Define workflow
     builder = StateGraph(dict)
-    
+
+    # Initialize user cultural context
+    @measure_time
+    def initialize_user_context(state: Dict) -> Dict:
+        """Initialize user's relevant cultures and protect them from being overwritten."""
+        user_profile = state.get("user_profile", {})
+
+        # Derive user's relevant cultures
+        user_relevant_cultures = derive_relevant_cultures(user_profile)
+
+        # Set the PROTECTED field that won't be overwritten
+        state["user_relevant_cultures"] = user_relevant_cultures
+
+        # Also set in question_meta for compatibility but this may be overwritten
+        if "question_meta" not in state:
+            state["question_meta"] = {}
+        state["question_meta"]["user_relevant_cultures"] = user_relevant_cultures.copy()
+
+        return state
+
     # Add nodes
+    builder.add_node("initialize_context", initialize_user_context)
     builder.add_node("analyze_sensitivity", analyze_question_sensitivity)
-    builder.add_node("route_cultures", route_to_cultures_smart) 
+    builder.add_node("route_cultures", route_to_cultures_smart)
     builder.add_node("compose_response", compose_final_response_smart)
     
     # Simple planner logic
@@ -40,8 +61,11 @@ def create_smart_cultural_graph():
         if "steps" not in state:
             state["steps"] = []
         
-        # Check if sensitive
-        if state.get("is_sensitive", False):
+        # Check if sensitive (check both locations for compatibility)
+        is_sensitive = (state.get("is_sensitive", False) or
+                       state.get("question_meta", {}).get("is_sensitive", False))
+
+        if is_sensitive:
             # Sensitive - route to cultural experts
             state["__next__"] = "route_cultures"
             state["steps"].append("Routing to cultural experts (sensitive question)")
@@ -53,11 +77,12 @@ def create_smart_cultural_graph():
         return state
     
     builder.add_node("planner", planner_smart)
-    
+
     # Set entry point
-    builder.set_entry_point("analyze_sensitivity")
-    
+    builder.set_entry_point("initialize_context")
+
     # Add edges
+    builder.add_edge("initialize_context", "analyze_sensitivity")
     builder.add_edge("analyze_sensitivity", "planner")
     
     # Conditional routing from planner

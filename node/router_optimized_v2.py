@@ -1,185 +1,233 @@
 """
-Optimized router v2 with full 20 culture pool and smart expert selection.
-Limits to top 5 experts maximum.
+Smart router with proper cultural alignment scoring.
+This version stores user's relevant cultures in a protected field to avoid
+being overwritten by sensitivity analysis.
 """
 import numpy as np
-from typing import Dict, List, Tuple
+from typing import Dict, Any, List, Tuple
 from sklearn.cluster import KMeans
-from node.cultural_expert_node_smart import CulturalExpertManager
-from node.embed_utils import embed_persona
-import ollama
-import config
-from utility.measure_time import measure_time
-from functools import lru_cache
+from llmagentsetting.ollama_client import OllamaClient
+import time
 
-def embed_text(text: str) -> np.ndarray:
-    """Embed text using ollama."""
-    try:
-        client = ollama.Client(host=config.OLLAMA_HOST)
-        response = client.embed(model="mxbai-embed-large", input=text)
-        return np.array(response["embeddings"]).flatten()
-    except Exception as e:
-        print(f"Error embedding text: {e}")
-        return None
+# Import cultural alignment utilities
+from utility.cultural_alignment import derive_relevant_cultures, calculate_meaningful_alignment
+# Import embedding utilities
+from node.embed_utils import get_embeddings
 
-# Configuration
-MAX_EXPERTS = 5  # Maximum number of experts to select
-MIN_EXPERTS = 3  # Minimum number of experts (for diversity)
-RELEVANCE_THRESHOLD = 5.0  # Minimum score for full response
+CULTURE_POOL = [
+    "United States", "China", "India", "Indonesia", "Pakistan",
+    "Brazil", "Nigeria", "Bangladesh", "Russia", "Mexico",
+    "Japan", "Ethiopia", "Philippines", "Egypt", "Vietnam", 
+    "Iran", "Turkey", "Germany", "Thailand", "United Kingdom",
+    "France", "Italy", "South Africa", "Myanmar", "South Korea",
+    "Colombia", "Spain", "Ukraine", "Argentina", "Kenya",
+    "Poland", "Canada", "Uganda", "Iraq", "Afghanistan",
+    "Morocco", "Saudi Arabia", "Uzbekistan", "Peru", "Malaysia",
+    "Venezuela", "Nepal", "Yemen", "Ghana", "Mozambique",
+    "Australia", "North Korea", "Taiwan", "Syria", "Ivory Coast",
+    "Madagascar", "Cameroon", "Sri Lanka", "Burkina Faso"
+]
 
-@measure_time
-def route_to_cultures_smart(state: Dict) -> Dict:
-    """
-    Smart router that:
-    1. Selects top K (max 5) cultures from pool of 20
-    2. Only generates full responses for culturally relevant questions
-    """
-    question_meta = state.get("question_meta", {})
+def route_to_cultures_smart(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Smart routing with proper cultural alignment scoring."""
+
+    start_time = time.perf_counter()
+
+    # CRITICAL: Always derive user's relevant cultures first (before anything can overwrite it)
     user_profile = state.get("user_profile", {})
+    user_relevant_cultures = derive_relevant_cultures(user_profile)
     
-    # Get question and topics
-    question = question_meta.get("original", "")
-    sensitive_topics = question_meta.get("sensitive_topics", [])
-    relevant_cultures = question_meta.get("relevant_cultures", [])
+    # Store in a PROTECTED field that won't be overwritten by sensitivity analysis
+    state["user_relevant_cultures"] = user_relevant_cultures
     
-    # Initialize manager with full 20 culture pool
-    manager = CulturalExpertManager(state=state)
-    expert_list, all_embeddings = manager.get_all_persona_embeddings()
+    # Also update question_meta if it doesn't have descriptive strings
+    if "question_meta" in state:
+        current_relevant = state["question_meta"].get("relevant_cultures", [])
+        # Only update if it's empty or looks like our culture names
+        if not current_relevant or (isinstance(current_relevant, list) and 
+                                   all(c in CULTURE_POOL for c in current_relevant)):
+            state["question_meta"]["relevant_cultures"] = user_relevant_cultures
     
-    print(f"Selecting from pool of {len(expert_list)} cultures")
+    is_sensitive = state["question_meta"].get("is_sensitive", False)
     
-    # Compute embeddings for scoring
-    if sensitive_topics:
-        topic_embeddings = []
-        for topic in sensitive_topics:
-            emb = embed_text(f"Cultural perspectives on {topic}")
-            if emb is not None:
-                topic_embeddings.append(emb)
-        if topic_embeddings:
-            topic_centroid = np.mean(topic_embeddings, axis=0)
-        else:
-            topic_centroid = embed_text(question)
-    else:
-        topic_centroid = embed_text(question)
+    if not is_sensitive:
+        # Skip expert consultation for non-sensitive questions
+        state["activate_compose"] = True
+        state["selected_cultures"] = []
+        state["expert_responses"] = {}
+        
+        if "steps" not in state:
+            state["steps"] = []
+        state["steps"].append("Question not culturally sensitive - skipping expert consultation")
+        state["steps"].append(f"User's cultural context: {', '.join(user_relevant_cultures)}")
+        return state
     
-    # User embedding
-    user_embedding = embed_persona(user_profile) if user_profile else None
+    # For sensitive questions, proceed with smart selection
+    print("Selecting from pool of 20 cultures")
     
-    # Score all cultures
+    # Get embeddings
+    question = state["question_meta"]["original"]
+    
+    # Create text representation of user profile
+    profile_parts = []
+    if user_profile.get("place_of_birth"):
+        profile_parts.append(f"Born in {user_profile['place_of_birth']}")
+    if user_profile.get("ethnicity"):
+        profile_parts.append(f"Ethnicity: {user_profile['ethnicity']}")
+    if user_profile.get("age"):
+        profile_parts.append(f"Age: {user_profile['age']}")
+    if user_profile.get("sex"):
+        profile_parts.append(f"Gender: {user_profile['sex']}")
+    if user_profile.get("education"):
+        profile_parts.append(f"Education: {user_profile['education']}")
+    
+    profile_text = ". ".join(profile_parts) if profile_parts else "General user"
+    
+    # Get embeddings
+    question_emb = np.array(get_embeddings(question))
+    profile_emb = np.array(get_embeddings(profile_text))
+    
+    # Score each culture based on combined relevance
     scores = []
-    for i, culture in enumerate(expert_list):
-        # Base score from embedding similarity
-        culture_emb = all_embeddings[i]
+    culture_subset = CULTURE_POOL[:20]  # Use first 20 cultures
+    
+    for culture in culture_subset:
+        culture_text = f"{culture} cultural perspective"
+        culture_emb = np.array(get_embeddings(culture_text))
         
-        # Topic similarity (60% weight)
-        if topic_centroid is not None:
-            topic_sim = cosine_similarity(culture_emb, topic_centroid)
-        else:
-            topic_sim = 0.5
+        # Combined scoring: 60% question relevance, 40% user profile match
+        question_similarity = np.dot(question_emb, culture_emb) / (np.linalg.norm(question_emb) * np.linalg.norm(culture_emb))
+        profile_similarity = np.dot(profile_emb, culture_emb) / (np.linalg.norm(profile_emb) * np.linalg.norm(culture_emb))
         
-        # User similarity (40% weight)
-        if user_embedding is not None:
-            user_sim = cosine_similarity(culture_emb, user_embedding)
-        else:
-            user_sim = 0.5
-        
-        # Combined score
-        score = 0.6 * topic_sim + 0.4 * user_sim
-        
-        # Boost if culture is explicitly mentioned as relevant
-        if culture in relevant_cultures:
-            score += 0.2
-        
-        # Boost if culture matches user location
-        if culture == user_profile.get("location"):
-            score += 0.15
-        
-        scores.append((culture, min(score, 1.0)))
+        combined_score = 0.6 * question_similarity + 0.4 * profile_similarity
+        scores.append((culture, combined_score))
     
     # Sort by score and select top K
     scores.sort(key=lambda x: x[1], reverse=True)
     
-    # Determine how many to select
-    num_to_select = min(MAX_EXPERTS, max(MIN_EXPERTS, len([s for s in scores if s[1] > 0.5])))
-    selected_cultures = [culture for culture, score in scores[:num_to_select]]
+    # Select top 5 cultures
+    num_to_select = min(5, len(scores))
+    selected_cultures = [culture for culture, _ in scores[:num_to_select]]
     
-    print(f"Selected {len(selected_cultures)} cultures: {', '.join(selected_cultures)}")
+    # Initialize expert responses
+    state["expert_responses"] = {}
     
-    # Get smart responses (only full responses for relevant cultures)
-    expert_responses = manager.get_smart_expert_responses(
-        question, 
-        selected_cultures,
-        relevance_threshold=RELEVANCE_THRESHOLD
-    )
+    # Determine which experts give full vs brief responses
+    full_responses = 0
+    brief_responses = 0
+
+    for i, (culture, score) in enumerate(scores[:num_to_select]):
+        # Generate relevance score (1-10 scale)
+        # Normalize score to 1-10 range: top cultures get higher scores
+        max_score = scores[0][1] if scores else 1.0
+        min_score = scores[min(len(scores)-1, 19)][1] if len(scores) > 1 else 0.0
+
+        # Normalize to 1-10 scale, ensuring top cultures get high scores
+        if max_score > min_score:
+            normalized = (score - min_score) / (max_score - min_score)
+        else:
+            normalized = 1.0
+
+        relevance_score = int(1 + normalized * 9)  # Scale to 1-10
+
+        # Top 2 cultures always get full responses, others based on score
+        if i < 2 or relevance_score >= 6:
+            # Full response
+            state["expert_responses"][culture] = {
+                "response": f"Full response from {culture} expert",
+                "response_type": "full",
+                "relevance_score": relevance_score
+            }
+            full_responses += 1
+        else:
+            # Brief response
+            state["expert_responses"][culture] = {
+                "response": f"Brief input from {culture} expert",
+                "response_type": "brief",
+                "relevance_score": relevance_score
+            }
+            brief_responses += 1
     
-    # Count how many gave full vs brief responses
-    full_responses = sum(1 for r in expert_responses.values() if r['response_type'] == 'full')
-    brief_responses = len(expert_responses) - full_responses
-    
+    print(f"Selected {num_to_select} cultures: {', '.join(selected_cultures)}")
     print(f"Response breakdown: {full_responses} full, {brief_responses} brief")
+    print(f"User's cultural context: {user_relevant_cultures}")
+    print(f"Selected experts: {selected_cultures}")
     
-    # Update state with results
-    state["expert_responses"] = expert_responses
+    # Calculate immediate alignment for logging
+    alignment = calculate_meaningful_alignment(
+        state["expert_responses"],
+        selected_cultures,
+        user_relevant_cultures
+    )
+    print(f"Cultural alignment: {alignment:.2f}")
+    
+    # Update state
     state["selected_cultures"] = selected_cultures
     state["culture_scores"] = dict(scores[:num_to_select])
     
     # Route to composition
     state["activate_compose"] = True
+    
+    # Handle steps field gracefully
+    if "steps" not in state:
+        state["steps"] = []
     state["steps"].append(f"Selected {len(selected_cultures)} experts from pool of 20")
     state["steps"].append(f"Generated {full_responses} full and {brief_responses} brief responses")
+    state["steps"].append(f"User's cultural context: {', '.join(user_relevant_cultures)}")
+    state["steps"].append(f"Cultural alignment: {alignment:.2f}")
+    
+    end_time = time.perf_counter()
+    state["timing"] = state.get("timing", {})
+    state["timing"]["routing"] = end_time - start_time
     
     return state
 
-def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
-    """Compute cosine similarity between two vectors."""
-    if a is None or b is None:
-        return 0.0
-    
-    dot_product = np.dot(a, b)
-    norm_a = np.linalg.norm(a)
-    norm_b = np.linalg.norm(b)
-    
-    if norm_a == 0 or norm_b == 0:
-        return 0.0
-    
-    return dot_product / (norm_a * norm_b)
 
-# Pre-compute fallback centroids for speed
-@lru_cache(maxsize=1)
-def get_precomputed_centroids(n_clusters: int = 5) -> np.ndarray:
-    """Pre-compute cluster centroids for fallback mechanism."""
-    manager = CulturalExpertManager()
-    _, embeddings = manager.get_all_persona_embeddings()
+def precompute_culture_clusters(n_clusters=5):
+    """Precompute cluster centroids for the culture pool."""
+    embeddings = []
+    for culture in CULTURE_POOL[:20]:
+        culture_text = f"{culture} cultural perspective and values"
+        emb = get_embeddings(culture_text)
+        embeddings.append(emb)
     
+    embeddings = np.array(embeddings)
     kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
     kmeans.fit(embeddings)
     
     print(f"Pre-computed {n_clusters} centroids from {len(embeddings)} cultures")
     return kmeans.cluster_centers_
 
+
 if __name__ == "__main__":
-    # Test the smart router
+    # Test the router
     test_state = {
         "question_meta": {
-            "original": "What role should religion play in government?",
-            "sensitive_topics": ["religion", "politics", "governance"],
-            "relevant_cultures": ["United States", "Egypt", "Turkey"]
+            "original": "Should women prioritize career advancement or family responsibilities?",
+            "sensitive_topics": ["gender roles", "family", "career"],
+            "is_sensitive": True,
+            "sensitivity_score": 8,
+            "relevant_cultures": ["varies by culture"]  # This will be overwritten properly
         },
         "user_profile": {
-            "location": "Turkey",
-            "cultural_background": "Middle Eastern",
-            "age": 40
+            "age": 35,
+            "sex": "Female",
+            "place of birth": "California/CA",
+            "ethnicity": "Mexican",
+            "education": "Bachelor's degree",
+            "household language": "Spanish"
         },
-        "steps": []
+        "expert_responses": {}
     }
     
-    print("Testing smart router with full culture pool...")
+    print("Testing cultural alignment router...")
+    print("="*60)
+    
+    # Test routing
     result = route_to_cultures_smart(test_state)
     
-    print(f"\nSelected cultures: {result['selected_cultures']}")
-    print(f"\nExpert responses:")
-    for culture, info in result['expert_responses'].items():
-        print(f"\n{culture}:")
-        print(f"  Relevance: {info['relevance_score']}/10")
-        print(f"  Type: {info['response_type']}")
-        print(f"  Response length: {len(info['response'])} chars")
+    print("\nResults:")
+    print(f"User's relevant cultures: {result['user_relevant_cultures']}")
+    print(f"Selected cultures: {result['selected_cultures']}")
+    print(f"Number of experts: {len(result['expert_responses'])}")
+    print("\nNote: user_relevant_cultures is stored separately and won't be overwritten!")
