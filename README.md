@@ -1,9 +1,9 @@
 # Cultural Alignment Project
 
 ## Overview
-The Cultural Alignment Project is a production-ready, culturally-aware multi-agent dialogue pipeline built with LangGraph. The system analyzes cultural sensitivities and generates responses that reflect diverse cultural perspectives, demonstrating **69%+ improvement** in cultural alignment over baseline approaches.
+The Cultural Alignment Project is built to be a culturally-aware multi-agent dialogue pipeline built with LangGraph. The system analyzes cultural sensitivities and generates responses that reflect diverse cultural perspectives, demonstrating **69%+ improvement** in cultural alignment over baseline approaches.
 
-### 🎯 **Key Achievements**
+### **Key Achievements**
 - **Clean Architecture**: No monkey-patching required - fully modular design
 - **Proven Performance**: 69%+ better cultural alignment than baseline systems
 - **Comprehensive Validation**: 10+ cycle testing with detailed metrics and analysis
@@ -33,7 +33,7 @@ The project employs a multi-agent dialogue pipeline built with LangGraph. This f
 
 ### Key Technical Components & Process
 
-#### 🏗️ **Clean Architecture Design**
+#### **Clean Architecture Design**
 The system employs a modular, clean architecture without monkey-patching:
 
 1. **Cultural Sensitivity Analysis**: Automatically detects culturally sensitive topics using advanced LLM analysis
@@ -43,7 +43,7 @@ The system employs a modular, clean architecture without monkey-patching:
 
 ![graph](img/graph.png)
 
-#### 🔧 **Technical Implementation**
+#### **Technical Implementation**
 - **Embedding Models**: Uses `mxbai-embed-large` via Ollama for semantic similarity and cultural relevance
 - **LangGraph Pipeline**: Structured multi-agent workflow with conditional routing
 - **Smart Cultural Pool**: 20+ diverse cultures with intelligent selection algorithms
@@ -51,7 +51,7 @@ The system employs a modular, clean architecture without monkey-patching:
 
 ## Installation & Setup
 
-### 🐳 **Recommended: Docker Setup (GPU-Enabled)**
+### **Recommended: Docker Setup (GPU-Enabled)**
 
 The easiest way to run the cultural alignment system is using our pre-configured Docker environment:
 
@@ -81,7 +81,7 @@ The easiest way to run the cultural alignment system is using our pre-configured
    docker exec -it cultural-agent-container python main.py
    ```
 
-### 🐍 **Alternative: Local Python Setup**
+### **Alternative: Local Python Setup**
 
 For local development without Docker:
 
@@ -123,7 +123,7 @@ For local development without Docker:
 
 3. Save the `.env` file. Your environment is now configured for local development.
 
-## 🚀 Running the Project
+## Running the Project
 
 ### **Interactive Cultural Dialogue**
 Run the main interactive system:
@@ -136,7 +136,7 @@ docker exec -it cultural-agent-container python main.py
 python main.py
 ```
 
-### **🔬 Validation & Testing**
+### **Validation & Testing**
 
 #### **Comprehensive System Validation**
 Run the full validation suite to test cultural alignment performance:
@@ -163,13 +163,13 @@ Test the baseline alignment scoring improvements:
 docker exec -it cultural-agent-container python test_baseline_alignment_fix.py
 ```
 
-### **📊 Expected Performance**
+### **Expected Performance**
 - **Cultural Alignment Score**: 0.25-0.50 (model) vs 0.10-0.20 (baseline)
 - **Expert Responses**: 2-4 experts per sensitive question
 - **Processing Time**: ~13-15 seconds per question (including expert consultation)
 - **Improvement**: **69%+ better cultural alignment** than baseline
 
-## 🏗️ System Architecture
+## System Architecture
 
 ### **Core Components**
 
@@ -199,7 +199,7 @@ docker exec -it cultural-agent-container python test_baseline_alignment_fix.py
 5. **Final Composition**: Culturally-aligned response synthesis
 6. **Validation**: Comprehensive metrics and performance evaluation
 
-## 📁 Project Structure
+## Project Structure
 
 ### **Core Files**
 - **`main.py`**: Interactive cultural dialogue system entry point
@@ -240,7 +240,7 @@ docker exec -it cultural-agent-container python test_baseline_alignment_fix.py
 - **`corpora/wvs_questions.json`**: World Values Survey questions for cultural analysis
 - **Persona Data**: SynthLabAI dataset for diverse cultural profiles
 
-## 📊 Performance & Validation Results
+## Performance & Validation Results
 
 ### **Proven Performance Metrics**
 Our comprehensive validation demonstrates significant improvements in cultural alignment:
