@@ -1,0 +1,19 @@
+Cultural Alignment Score Statistics (FINAL)
+==================================================
+count    100.000000
+mean       0.144000
+std        0.106509
+min        0.000000
+25%        0.000000
+50%        0.200000
+75%        0.200000
+max        0.333333
+Name: cultural_alignment_score, dtype: float64
+
+Value counts:
+cultural_alignment_score
+0.000000    33
+0.200000    57
+0.250000     4
+0.333333     6
+Name: count, dtype: int64

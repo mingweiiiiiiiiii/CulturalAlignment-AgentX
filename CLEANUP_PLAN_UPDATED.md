@@ -23,7 +23,7 @@ The project has accumulated even more versions due to the cultural alignment sco
 - `run_100_cycles.py` - Original broken version
 - `run_100_cycles_fixed.py` - Fixed baseline but circular alignment logic
 - `run_100_cycles_fixed_proper.py` - Attempted proper fix (unused)
-- `run_100_cycles_final.py` - **FINAL working version with proper alignment**
+- `cultural_alignment_validator.py` - **FINAL working version with proper alignment**
 - Various test and debug scripts from alignment fixing
 
 ### Additional Files Created Today

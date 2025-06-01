@@ -7,7 +7,7 @@ import sys
 import time
 from utility.baseline import generate_baseline_essay
 from utility.cultural_alignment import derive_relevant_cultures
-from run_100_cycles_final import evaluate_baseline_response
+from cultural_alignment_validator import evaluate_baseline_response
 
 def test_baseline_alignment_fix():
     """Test the baseline cultural alignment fix with sample responses."""

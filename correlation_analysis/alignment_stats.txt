@@ -1,0 +1,16 @@
+Cultural Alignment Score Statistics
+==================================================
+count    5.0
+mean     0.0
+std      0.0
+min      0.0
+25%      0.0
+50%      0.0
+75%      0.0
+max      0.0
+Name: cultural_alignment_score, dtype: float64
+
+Value counts:
+cultural_alignment_score
+0.0    5
+Name: count, dtype: int64

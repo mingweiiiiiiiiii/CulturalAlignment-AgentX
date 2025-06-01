@@ -1,9 +1,26 @@
 #!/usr/bin/env python3
 """
-Cultural Alignment Evaluation Script
+Cultural Alignment System Validation and Evaluation Script
 
-This script runs comparisons between the cultural alignment system and baseline,
-generating comprehensive metrics and visualizations. No monkey-patching required.
+This script provides comprehensive validation and evaluation of the cultural alignment system.
+It compares the model performance against a baseline and generates detailed reports.
+
+Key Features:
+- Model vs baseline comparison with cultural alignment scoring
+- Comprehensive validation reports (CSV, JSON, correlation analysis)
+- Clean architecture without monkey-patching
+- Validates both model and baseline cultural alignment scoring
+- Tests the cleaned cultural alignment system functionality
+
+Usage:
+    python cultural_alignment_validator.py
+
+Outputs:
+- eval_results_*.csv: Detailed test results
+- paired_profiles_metrics_*.json: User profile and metrics data
+- correlation_analysis_*.zip: Statistical analysis and visualizations
+- model_vs_baseline_comparison_*.csv: Performance comparison table
+- run_final.log: Execution logs
 """
 import pandas as pd
 import json
@@ -498,12 +515,12 @@ def create_comparison_table(df: pd.DataFrame):
     return comparison_df
 
 if __name__ == "__main__":
-    print("Starting Quick Validation Run with Clean Cultural Alignment")
-    print("Testing 3 samples to verify baseline alignment fix worked")
+    print("Starting Full Validation Run with Clean Cultural Alignment")
+    print("Testing 10 samples to verify complete system functionality")
     print("="*60)
     
     # Run with specified number of tests
-    n_tests = 3  # Quick test of baseline alignment fix
+    n_tests = 10  # Full validation run
     
     # Run comparison
     results_df = compare_with_baseline(n=n_tests)
