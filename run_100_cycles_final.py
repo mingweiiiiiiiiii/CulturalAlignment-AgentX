@@ -137,31 +137,60 @@ def evaluate_response(graph_state) -> dict:
     }
 
 def evaluate_baseline_response(response_text: str, user_profile: dict) -> dict:
-    """Evaluate baseline response with proper cultural derivation."""
+    """Evaluate baseline response with improved cultural alignment assessment."""
     length = len(response_text)
     completeness = float(any(opt.lower() in response_text.lower() for opt in ['a', 'b', 'c', 'd', 'e', 'f']))
-    
+
     # Derive relevant cultures for this user
     relevant_cultures = derive_relevant_cultures(user_profile)
-    
-    # Simple heuristics for baseline metrics
+
+    # Since baseline is designed to be culturally neutral, we need a different approach
+    # to assess cultural alignment than looking for explicit culture mentions
+
+    # Cultural concepts and values that might indicate cultural awareness
+    cultural_indicators = {
+        'family': ['family', 'parents', 'children', 'relatives', 'household', 'kinship'],
+        'community': ['community', 'society', 'neighbors', 'social', 'collective', 'group'],
+        'tradition': ['tradition', 'custom', 'heritage', 'values', 'beliefs', 'practices'],
+        'respect': ['respect', 'honor', 'dignity', 'courtesy', 'reverence'],
+        'authority': ['authority', 'elder', 'leadership', 'hierarchy', 'senior'],
+        'individual': ['individual', 'personal', 'self', 'independence', 'autonomy'],
+        'diversity': ['diverse', 'different', 'various', 'multiple', 'range'],
+        'tolerance': ['tolerance', 'acceptance', 'understanding', 'open-minded']
+    }
+
+    # Count cultural concept mentions
+    response_lower = response_text.lower()
+    cultural_concept_score = 0
+    total_concepts = 0
+
+    for concept_category, keywords in cultural_indicators.items():
+        category_mentions = sum(1 for keyword in keywords if keyword in response_lower)
+        if category_mentions > 0:
+            cultural_concept_score += min(1.0, category_mentions / len(keywords))
+        total_concepts += 1
+
+    # Normalize cultural concept score (0-1 range)
+    cultural_concept_score = cultural_concept_score / total_concepts if total_concepts > 0 else 0
+
+    # Response sophistication indicators
+    sophistication_keywords = ['consider', 'perspective', 'viewpoint', 'approach', 'balance',
+                              'context', 'situation', 'circumstances', 'factors', 'aspects']
+    sophistication_score = sum(1 for keyword in sophistication_keywords if keyword in response_lower)
+    sophistication_score = min(1.0, sophistication_score / len(sophistication_keywords))
+
+    # Final cultural alignment score for baseline:
+    # Combination of cultural concept awareness and response sophistication
+    # This reflects how well the baseline addresses cultural dimensions without being explicit
+    cultural_score = (cultural_concept_score * 0.7 + sophistication_score * 0.3)
+
+    # Count general cultural/demographic terms (not specific countries)
+    general_cultural_terms = ["cultural", "culture", "background", "heritage", "tradition",
+                             "community", "society", "people", "group", "demographic"]
+    unique_cultures = len([term for term in general_cultural_terms if term in response_lower])
+
+    # Diversity entropy based on word variety
     words = response_text.lower().split()
-    
-    # Check if baseline mentions any of the user's relevant cultures
-    mentioned_cultures = 0
-    for culture in relevant_cultures:
-        if culture.lower() in response_text.lower():
-            mentioned_cultures += 1
-    
-    # Cultural alignment for baseline = proportion of relevant cultures mentioned
-    cultural_score = mentioned_cultures / max(1, len(relevant_cultures))
-    
-    # Count unique culture mentions
-    all_cultures = ["american", "chinese", "indian", "japanese", "brazilian", "mexican", 
-                   "european", "asian", "african", "western", "eastern"]
-    unique_cultures = len([c for c in all_cultures if c in response_text.lower()])
-    
-    # Diversity entropy
     diversity = min(1.0, len(set(words)) / max(1, len(words)))
     
     return {
@@ -470,11 +499,11 @@ def create_comparison_table(df: pd.DataFrame):
 
 if __name__ == "__main__":
     print("Starting Quick Validation Run with Clean Cultural Alignment")
-    print("Testing 5 samples to verify alignment scoring fix worked")
+    print("Testing 3 samples to verify baseline alignment fix worked")
     print("="*60)
     
     # Run with specified number of tests
-    n_tests = 5  # Quick validation with alignment fix
+    n_tests = 3  # Quick test of baseline alignment fix
     
     # Run comparison
     results_df = compare_with_baseline(n=n_tests)
